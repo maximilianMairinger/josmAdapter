@@ -18,16 +18,18 @@ export type TransmissionAdapter<Data = unknown> = {
 export type SecondaryStoreAdapter<Data = unknown> = {
   // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
   onMsg?(cb: (data: Data) => void): UnsubscribeFunc
-  send(data: Data): void
+  send?(data: Data): void
   msg(): Promise<Data> | Data
   closing?: Promise<void>
   [isAdapterSym]: true
 }
 
 // with onMsg required
-export type PrimaryStoreAdapter<Data = unknown> = {
+export type PrimaryStoreAdapter<Data = unknown> = SecondaryStoreAdapter<Data> & {
   [key in keyof SecondaryStoreAdapter<Data> as "onMsg"]-?: SecondaryStoreAdapter<Data>[key]
-} & SecondaryStoreAdapter<Data>
+} & {
+  [key in keyof SecondaryStoreAdapter<Data> as "send"]-?: SecondaryStoreAdapter<Data>[key]
+}
 
 
 
@@ -126,12 +128,12 @@ export function dataBaseToAdapter(dataBase: Data | DataBase): PrimaryStoreAdapte
 
 
 
-export function fullyConnectedJosmAdapter(adapter: TransmissionAdapter | ((initData: unknown) => (TransmissionAdapter | Promise<TransmissionAdapter>)), data_dataBase: SecondaryStoreAdapter, isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
-export function fullyConnectedJosmAdapter(adapter: TransmissionAdapter, data_dataBase: SecondaryStoreAdapter | ((initData: unknown) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)), readOnly?: boolean | Data<boolean>): void
-export function fullyConnectedJosmAdapter(_outAdapter: TransmissionAdapter | ((initData: unknown) => TransmissionAdapter | Promise<TransmissionAdapter>), data_dataBase: SecondaryStoreAdapter | ((initData: unknown) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)), isInitiallyDominantDataSource_readOnly?: boolean | Data<boolean>, _readOnly?: boolean | Data<boolean>) {
+export function fullyConnectedJosmAdapter(adapter: TransmissionAdapter | ((initData: unknown) => (TransmissionAdapter | Promise<TransmissionAdapter>)), __inpAdapter: SecondaryStoreAdapter, isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
+export function fullyConnectedJosmAdapter(adapter: TransmissionAdapter, __inpAdapter: SecondaryStoreAdapter | ((initData: unknown) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)), readOnly?: boolean | Data<boolean>): void
+export function fullyConnectedJosmAdapter(_outAdapter: TransmissionAdapter | ((initData: unknown) => TransmissionAdapter | Promise<TransmissionAdapter>), __inpAdapter: SecondaryStoreAdapter | ((initData: unknown) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)), isInitiallyDominantDataSource_readOnly?: boolean | Data<boolean>, _readOnly?: boolean | Data<boolean>) {
   if (_outAdapter instanceof Function) {
     return (async () => {
-      const msg = (data_dataBase as SecondaryStoreAdapter).msg()
+      const msg = (__inpAdapter as SecondaryStoreAdapter).msg()
       const ret = msg instanceof Promise ? _outAdapter(await msg) : _outAdapter(msg)
       return runWithOut(ret instanceof Promise ? await ret : ret)
     })()
@@ -140,7 +142,7 @@ export function fullyConnectedJosmAdapter(_outAdapter: TransmissionAdapter | ((i
 
   function runWithOut(_outAdapter: TransmissionAdapter) {
     const outAdapter = empowerAdapter(_outAdapter)
-    const isFunc = data_dataBase instanceof Function && data_dataBase[instanceTypeSym] !== "DataBase"
+    const isFunc = __inpAdapter instanceof Function && __inpAdapter[instanceTypeSym] !== "DataBase"
     const isInitiallyDominantDataSource: boolean = isFunc ? false : isInitiallyDominantDataSource_readOnly as boolean ?? true
     const readOnly: boolean | Data<boolean> = (isFunc ? isInitiallyDominantDataSource_readOnly ?? false : _readOnly ?? isInitiallyDominantDataSource) as boolean | Data<boolean>
     const readOnlyData = typeof readOnly !== "boolean" ? readOnly : new Data(readOnly)
@@ -173,37 +175,40 @@ export function fullyConnectedJosmAdapter(_outAdapter: TransmissionAdapter | ((i
           unSub()
         })
       }
-      const setToData = (data: any) => {
-        disabled = true
-        inpAdapter.send(data)
-        disabled = false
+      
+  
+      if (inpAdapter.send !== undefined) {
+        const setToData = (data: any) => {
+          disabled = true
+          inpAdapter.send(data)
+          disabled = false
+        }
+        const inpAdapterClosed = new Data(false)
+        if (inpAdapter.closing) inpAdapter.closing.then(() => {
+          inpAdapterClosed.set(true)
+        })
+    
+        const canListenToOutAdapter = new Data()
+        new DataCollection(inpAdapterClosed, readOnlyData).get((inpClosed, readOnly) => {
+          canListenToOutAdapter.set(!inpClosed && !readOnly)
+        })
+    
+        let unsubscribeFromCurrentListener: UnsubscribeFunc = () => {}
+        canListenToOutAdapter.get((canListen) => {
+          if (canListen) unsubscribeFromCurrentListener = outAdapter.onMsg(setToData)
+          else unsubscribeFromCurrentListener()
+        })
       }
-  
-      const inpAdapterClosed = new Data(false)
-      if (inpAdapter.closing) inpAdapter.closing.then(() => {
-        inpAdapterClosed.set(true)
-      })
-  
-      const canListenToOutAdapter = new Data()
-      new DataCollection(inpAdapterClosed, readOnlyData).get((inpClosed, readOnly) => {
-        canListenToOutAdapter.set(!inpClosed && !readOnly)
-      })
-  
-      let unsubscribeFromCurrentListener: UnsubscribeFunc = () => {}
-      canListenToOutAdapter.get((canListen) => {
-        if (canListen) unsubscribeFromCurrentListener = outAdapter.onMsg(setToData)
-        else unsubscribeFromCurrentListener()
-      })
     }
   
     if (isFunc) {
       outAdapter.onMsg(async (data) => {
-        const ret = data_dataBase(data)
+        const ret = __inpAdapter(data)
         runWithInp(ret instanceof Promise ? await ret : ret)
       }, true)
     }
     else {
-      runWithInp(data_dataBase as SecondaryStoreAdapter)
+      runWithInp(__inpAdapter as SecondaryStoreAdapter)
     }
   }
 
