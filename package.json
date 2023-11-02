@@ -30,9 +30,9 @@
     "url": "git+https://github.com/maximilianMairinger/josmAdapter.git"
   },
   "keywords": [
-  "josm",
-  "adapter"
-],
+    "josm",
+    "adapter"
+  ],
   "author": "maximilianMairinger",
   "license": "ISC",
   "bugs": {
@@ -61,8 +61,12 @@
     "webpack-merge": "^5.0.9"
   },
   "dependencies": {
-    "commander": "^10.0.1",
+    "circ-json": "^1.0.4",
     "colorful-cli-logger": "^1.0.0",
+    "commander": "^10.0.1",
+    "josm": "^1.7.43",
+    "mkdirp": "^3.0.1",
+    "more-proms": "^1.3.1",
     "req-package-json": "^2.1.2"
   }
 }
