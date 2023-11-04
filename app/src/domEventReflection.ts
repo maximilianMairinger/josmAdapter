@@ -1,4 +1,4 @@
-import { SecondaryStoreAdapter, isAdapterSym } from "./josmAdapter"
+import { PrimaryTransmissionAdapter, SecondaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import { makeJosmReflection } from "./josmReflection";
 import { EventListener } from "extended-dom"
 import LinkedList from "fast-linked-list";
@@ -6,7 +6,7 @@ import LinkedList from "fast-linked-list";
 
 
 
-export function eventReflection({listener, value}: {listener: EventListener, value: () => unknown}): SecondaryStoreAdapter {
+export function eventListenerToAdapter({listener, value}: {listener: EventListener, value: () => unknown}): SecondaryStoreAdapter {
   const ls = new LinkedList<(data: unknown) => void>()
 
   listener.listener(() => {
@@ -15,6 +15,7 @@ export function eventReflection({listener, value}: {listener: EventListener, val
   })
 
   return {
+
     onMsg(cb) {
       const tok = ls.push(cb)
       return tok.rm.bind(tok)
@@ -26,4 +27,4 @@ export function eventReflection({listener, value}: {listener: EventListener, val
 
 
 
-export const josmEventReflection = makeJosmReflection(eventReflection)
+export const josmEventReflection = makeJosmReflection(eventListenerToAdapter, true)

@@ -6,6 +6,7 @@ import json from '@rollup/plugin-json'
 
 export default {
   input: './repl/src/repl.ts',
+  treeshake: "smallest",
   output: {
     file: 'repl/dist/josmAdapter-repl.js',
     format: 'cjs',

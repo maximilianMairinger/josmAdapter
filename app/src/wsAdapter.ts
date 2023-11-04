@@ -1,14 +1,14 @@
 import { stringify, parse } from "circ-json"
 import { Data, DataBase, instanceTypeSym, DataBaseSubscription, DataSubscription } from "josm";
 import { WebSocket as NodeWebSocket } from "ws";
-import { TransmissionAdapter, makeAdapterPair, isAdapterSym } from "./josmAdapter"
+import { PrimaryTransmissionAdapter, makeAdapterPair, isAdapterSym } from "./fullyConnectedAdapter"
 
 
 type Ws = WebSocket | NodeWebSocket
 
 
-export function wsToAdapter(ws: WebSocket): Promise<TransmissionAdapter> {
-  return new Promise<TransmissionAdapter>((_res) => {
+export function wsToAdapter(ws: WebSocket): Promise<PrimaryTransmissionAdapter> {
+  return new Promise<PrimaryTransmissionAdapter>((_res) => {
     function res() {
       _res({
         send(data) {
@@ -45,5 +45,5 @@ export function wsToAdapter(ws: WebSocket): Promise<TransmissionAdapter> {
   
 }
 
-export const { josmAdapter: websocketJosmAdapter, josmAdapterClient: websocketJosmAdapterClient } = makeAdapterPair(wsToAdapter)
+export const { josmAdapterServer: websocketJosmAdapterServer, josmAdapterClient: websocketJosmAdapterClient } = makeAdapterPair(wsToAdapter)
 

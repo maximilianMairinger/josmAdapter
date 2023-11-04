@@ -1,4 +1,4 @@
-import { SecondaryStoreAdapter, isAdapterSym } from "./josmAdapter"
+import { PrimaryTransmissionAdapter, SecondaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import { makeJosmReflection } from "./josmReflection";
 import { EventListener } from "extended-dom"
 import LinkedList from "fast-linked-list";
@@ -6,7 +6,7 @@ import LinkedList from "fast-linked-list";
 
 
 
-export function scrollReflection({target, dir}: {target: Element, dir: "x" | "y"}): SecondaryStoreAdapter {
+export function scrollTargetToAdapter({target, dir}: {target: Element, dir: "x" | "y"}): PrimaryTransmissionAdapter {
   const ls = new LinkedList<(data: unknown) => void>()
 
   const isX = dir === "x"
@@ -32,4 +32,4 @@ export function scrollReflection({target, dir}: {target: Element, dir: "x" | "y"
 
 
 
-export const josmScrollReflection = makeJosmReflection(scrollReflection)
+export const josmScrollReflection = makeJosmReflection(scrollTargetToAdapter)

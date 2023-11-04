@@ -1,10 +1,10 @@
-import { SecondaryStoreAdapter, isAdapterSym } from "./josmAdapter"
+import { PrimaryTransmissionAdapter, SecondaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import { makeJosmReflection } from "./josmReflection";
 import { stringify, parse } from "circ-json" // move this to binary
 
 
 
-export function localStorageToAdapter(id: string): SecondaryStoreAdapter {
+export function localStorageToAdapter(id: string): PrimaryTransmissionAdapter {
 
   return {
     msg() {

@@ -1,9 +1,9 @@
 import { Data, DataBase, instanceTypeSym, DataBaseSubscription, DataSubscription } from "josm";
-import { fullyConnectedJosmAdapter, TransmissionAdapter, makeAdapterPair, isAdapterSym } from "./josmAdapter"
+import { fullyConnectedJosmAdapter, PrimaryTransmissionAdapter, makeAdapterPair, isAdapterSym } from "./fullyConnectedAdapter"
 
 type Work = Omit<Worker, "terminate" | "onmessage" | "onmessageerror" | "onerror">
 
-export function workerToAdapter(worker: Work): TransmissionAdapter {
+export function workerToAdapter(worker: Work): PrimaryTransmissionAdapter {
   return {
     send(data) {
       worker.postMessage(data)
@@ -31,6 +31,6 @@ export function workerToAdapter(worker: Work): TransmissionAdapter {
   }
 }
 
-export const { josmAdapter: workerJosmAdapter, josmAdapterClient: workerJosmAdapterClient } = makeAdapterPair(workerToAdapter)
+export const { josmAdapterServer: workerJosmAdapterServer, josmAdapterClient: workerJosmAdapterClient } = makeAdapterPair(workerToAdapter)
 
 

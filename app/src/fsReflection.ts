@@ -1,4 +1,4 @@
-import { SecondaryStoreAdapter, isAdapterSym } from "./josmAdapter"
+import { PrimaryTransmissionAdapter, SecondaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import { makeJosmReflection } from "./josmReflection";
 import { mkdirp } from "mkdirp"
 import path from "path"
@@ -12,7 +12,7 @@ const exists = (filename: string) => fs.stat(filename).then(() => true).catch(()
 
 
 
-export async function fsToAdapter(fsPath: string): Promise<SecondaryStoreAdapter> {
+export async function fsToAdapter(fsPath: string): Promise<PrimaryTransmissionAdapter> {
   const closing = new ResablePromise<string>()
   closing.then((reason) => {
     console.error("closing fsAdapter:", reason)

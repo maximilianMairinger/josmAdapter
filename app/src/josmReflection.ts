@@ -1,5 +1,5 @@
 import { Data, DataBase, instanceTypeSym } from "josm";
-import { fullyConnectedJosmAdapter, SecondaryStoreAdapter, PrimaryStoreAdapter, isAdapterSym, dataBaseToAdapter } from "./josmAdapter";
+import { fullyConnectedJosmAdapter, SecondaryStoreAdapter, PrimaryStoreAdapter, isAdapterSym, dataBaseToAdapter, SecondaryTransmissionAdapter, PrimaryTransmissionAdapter } from "./fullyConnectedAdapter";
 
 
 
@@ -20,46 +20,54 @@ type DefaultVal<T, Unwrapped extends MaybeWrapped<T> = MaybeWrapped<T>> = Unwrap
 
 
 
-export async function reflection(reflection: SecondaryStoreAdapter, output: PrimaryStoreAdapter | ((initValue: unknown) => PrimaryStoreAdapter | Promise<PrimaryStoreAdapter>)): Promise<any> {
-  fullyConnectedJosmAdapter(output, reflection, true, true)
-}
 
+export function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: SecondaryStoreAdapter, output: PrimOrObWrapped & T, reverse: true): Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> 
+export function josmReflection<DB extends Data<T> | DataBase<T>, T>(reflectionAdapter: SecondaryStoreAdapter, output: DB, reverse: true): Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>
+export function josmReflection(reflectionAdapter: SecondaryStoreAdapter, output: PrimOrObWrapped | Data | DataBase, reverse: true): Promise<{adapter: PrimaryStoreAdapter, db: Data | DataBase}>
 
-export async function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: SecondaryStoreAdapter, output: PrimOrObWrapped & T): Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> 
-export async function josmReflection<DB extends Data<T> | DataBase<T>, T>(reflectionAdapter: SecondaryStoreAdapter, output: DB): Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>
-export async function josmReflection(reflectionAdapter: SecondaryStoreAdapter, output: PrimOrObWrapped | Data | DataBase): Promise<{adapter: PrimaryStoreAdapter, db: Data | DataBase}>
-export async function josmReflection(reflectionAdapter: SecondaryStoreAdapter, output: PrimOrObWrapped | Data | DataBase) {
+export function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: PrimaryTransmissionAdapter, output: PrimOrObWrapped & T, reverse?: boolean): Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> 
+export function josmReflection<DB extends Data<T> | DataBase<T>, T>(reflectionAdapter: PrimaryTransmissionAdapter, output: DB, reverse?: boolean): Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>
+export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter, output: PrimOrObWrapped | Data | DataBase, reverse?: boolean): Promise<{adapter: PrimaryStoreAdapter, db: Data | DataBase}>
+export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | SecondaryStoreAdapter, output: PrimOrObWrapped | Data | DataBase, reverse = false) {
   return new Promise<any>((res) => {
-    reflection(reflectionAdapter, async (initData: unknown) => {
+    const mkJosmF = async (storedData: unknown) => {
       let db: Data | DataBase
       const outputIsntDB = output[instanceTypeSym] === undefined
       if (outputIsntDB) {
-        const data = await crawlCyclicAndCallFunc(output, initData)
-        db = ((typeof initData === "object" && initData !== null) ? new DataBase(data) : new Data(data))
+        const data = await crawlCyclicAndCallFunc(output, storedData)
+        db = ((typeof output === "object" && output !== null) ? new DataBase(data) : new Data(data))
       }
       else db = output as Data | DataBase
       const adapter = dataBaseToAdapter(db)
       if (!outputIsntDB) {
-        adapter.send(initData)
+        adapter.send(storedData)
       }
 
-      if (db[instanceTypeSym] === "Data" && (typeof initData === "object" || initData !== null)) new Error("Reflection is object be should be primitive based on default.")
-      if (db[instanceTypeSym] === "DataBase" && !(typeof initData === "object" || initData !== null)) new Error("Reflection is primitive be should be object based on default.")
+      if (db[instanceTypeSym] === "Data" && (typeof storedData === "object" || storedData !== null)) new Error("Reflection is object be should be primitive based on default.")
+      if (db[instanceTypeSym] === "DataBase" && !(typeof storedData === "object" || storedData !== null)) new Error("Reflection is primitive be should be object based on default.")
 
 
       res({db, adapter})
       return adapter
-    })
+    }
+    if (!reverse) fullyConnectedJosmAdapter(reflectionAdapter as PrimaryTransmissionAdapter, mkJosmF, true, true)
+    else fullyConnectedJosmAdapter(mkJosmF, reflectionAdapter as SecondaryStoreAdapter, true, true)
+    
   })
 }
 
 
 
-export function makeJosmReflection<Instance>(instanceToAdapterFunc: (instance: Instance) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)) {
-  async function specificJosmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(fsPath: Instance, output: PrimOrObWrapped & T): Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> 
-  async function specificJosmReflection<DB extends Data<T> | DataBase<T>, T>(fsPath: Instance, output: DB): Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>
-  async function specificJosmReflection(fsPath: Instance, output: PrimOrObWrapped | Data | DataBase) {
-    return josmReflection(await instanceToAdapterFunc(fsPath), output)
+export function makeJosmReflection(instanceToAdapterFunc: (instance: undefined) => SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>, reverse: true)
+export function makeJosmReflection(instanceToAdapterFunc: (instance: unknown) => PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>, reverse?: false)
+export function makeJosmReflection<Instance, R extends PrimaryTransmissionAdapter | SecondaryStoreAdapter | Promise<PrimaryTransmissionAdapter | SecondaryStoreAdapter>>(instanceToAdapterFunc: (instance: Instance) => R, reverse?: boolean) {
+  type PromOrNo<Val> = R extends Promise<any> ? Promise<Val> : Val
+
+  function specificJosmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T): Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> 
+  function specificJosmReflection<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB): Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>
+  function specificJosmReflection(instance: Instance, output: PrimOrObWrapped | Data | DataBase): any {
+    const ins = instanceToAdapterFunc(instance)
+    return ins instanceof Promise ? ins.then((ins) => josmReflection(ins as SecondaryStoreAdapter, output, reverse as true)) : josmReflection(ins as PrimaryTransmissionAdapter, output, reverse as false)
   }
   return specificJosmReflection
 }
@@ -82,7 +90,7 @@ async function crawlCyclicAndCallFunc(ob: unknown, whereNeeded: unknown) {
       ob = ob()
       store.set(ogOb, ob)
     }
-    ob = await ob
+    ob = ob instanceof Promise ? await ob : ob
     if (typeof ob === "object") {
       const ret = Object.create(null)
       store.set(ogOb, ret)

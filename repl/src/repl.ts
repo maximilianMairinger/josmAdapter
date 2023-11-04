@@ -1,4 +1,16 @@
-// import josmAdapter from "../../app/src/josmAdapter"
-// //const testElem = document.querySelector("#test")
+import { josmLocalStorageReflection } from "../../app/src/josmAdapter"
 
-// josmAdapter()
+
+declare const window: any
+
+
+(async () => {
+  debugger
+  const lel = await josmLocalStorageReflection("leltest", {
+    whoop: false,
+  })
+  
+  
+  
+  window.lel = lel.db
+})()
