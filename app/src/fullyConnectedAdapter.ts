@@ -1,5 +1,5 @@
 import { Data, DataBase, instanceTypeSym, DataBaseSubscription, DataSubscription, DataCollection } from "josm";
-
+import { cloneKeys } from "circ-clone"
 
 // export type WebSocketUrl = string | URL 
 
@@ -106,7 +106,7 @@ type UnifiedDataAndBase = {
   set: (val: any) => void
 }
 
-function _unifyDataAndDataBase(data_dataBase: Data<any> | DataBase): UnifiedDataAndBase {
+function unifyDataAndDataBase(data_dataBase: Data<any> | DataBase): UnifiedDataAndBase {
   if (data_dataBase[instanceTypeSym] === "Data") {
     const data = data_dataBase as Data<any>
     return {
@@ -132,8 +132,6 @@ function _unifyDataAndDataBase(data_dataBase: Data<any> | DataBase): UnifiedData
   }
 }
 
-export const unifyDataAndDataBase = funcifyFunction(_unifyDataAndDataBase)
-
 
 export function dataBaseToAdapter(dataBase: Data | DataBase): PrimaryStoreAdapter {
   const db = unifyDataAndDataBase(dataBase)
@@ -149,7 +147,7 @@ export function dataBaseToAdapter(dataBase: Data | DataBase): PrimaryStoreAdapte
       db.set(data)
     },
     msg() {
-      return db.get()
+      return cloneKeys(db.get() as object)
     },
     [isAdapterSym]: true
   }
@@ -236,9 +234,10 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
       // onMsg or msg must be defined here, as it is required in the type definition
       if (outAdapter.msg !== undefined) {
         const msg = outAdapter.msg()
-        const f = (msg: SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>) => {
-          if (msg instanceof Promise) msg.then(__inpAdapter) 
-          else __inpAdapter(msg)
+        const f = (msg: SecondaryStoreAdapter) => {
+          const ret = __inpAdapter(msg)
+          if (ret instanceof Promise) ret.then((r) => runWithInp(r))
+          else runWithInp(ret)
         }
         if (msg instanceof Promise) msg.then(f)
         else f(msg as SecondaryStoreAdapter)

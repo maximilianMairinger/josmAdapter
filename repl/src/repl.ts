@@ -5,7 +5,7 @@ declare const window: any
 
 
 (async () => {
-  debugger
+  // debugger
   const lel = await josmLocalStorageReflection("leltest", {
     whoop: false,
   })
