@@ -106,7 +106,7 @@ type UnifiedDataAndBase = {
   set: (val: any) => void
 }
 
-function unifyDataAndDataBase(data_dataBase: Data<any> | DataBase): UnifiedDataAndBase {
+export function unifyDataAndDataBase(data_dataBase: Data<any> | DataBase): UnifiedDataAndBase {
   if (data_dataBase[instanceTypeSym] === "Data") {
     const data = data_dataBase as Data<any>
     return {
