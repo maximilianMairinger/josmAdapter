@@ -3,17 +3,17 @@ import { fullyConnectedJosmAdapter, SecondaryStoreAdapter, PrimaryStoreAdapter, 
 
 
 
-type Prim = boolean | string | number | null | undefined
-type Wrapped<Prim> = Prim | (() => Prim | Promise<Prim>) | Promise<Prim>
-type PrimOrObWrapped = Wrapped<Prim> | Wrapped<{[key in string | number]: PrimOrObWrapped}>
+export type Prim = boolean | string | number | null | undefined
+export type Wrapped<Prim> = Prim | (() => Prim | Promise<Prim>) | Promise<Prim>
+export type PrimOrObWrapped = Wrapped<Prim> | Wrapped<{[key in string | number]: PrimOrObWrapped}>
 
 
 
-type MaybeWrapped<T> = PromiseUnwrap<FunctionUnwrap<T>>
-type FunctionUnwrap<T> = T extends (...any: any) => infer R ? R : T
-type PromiseUnwrap<T> = T extends Promise<infer R> ? R : T
+export type MaybeWrapped<T> = PromiseUnwrap<FunctionUnwrap<T>>
+export type FunctionUnwrap<T> = T extends (...any: any) => infer R ? R : T
+export type PromiseUnwrap<T> = T extends Promise<infer R> ? R : T
 
-type DefaultVal<T, Unwrapped extends MaybeWrapped<T> = MaybeWrapped<T>> = Unwrapped extends {[key in string | number]: any} ? {[key in keyof Unwrapped]: DefaultVal<Unwrapped[key]>} :Unwrapped
+export type DefaultVal<T, Unwrapped extends MaybeWrapped<T> = MaybeWrapped<T>> = Unwrapped extends {[key in string | number]: any} ? {[key in keyof Unwrapped]: DefaultVal<Unwrapped[key]>} :Unwrapped
 
 
 
@@ -57,9 +57,12 @@ export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | S
 }
 
 
+type SpecificJosmReflection<Instance> = (<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T) => Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> )
+                                                                                                                                                                  & (<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB) => Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>)
 
-export function makeJosmReflection(instanceToAdapterFunc: (instance: undefined) => SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>, reverse: true)
-export function makeJosmReflection(instanceToAdapterFunc: (instance: unknown) => PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>, reverse?: false)
+
+// export function makeJosmReflection<Instance>(instanceToAdapterFunc: (instance: Instance) => SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>, reverse: true): SpecificJosmReflection<Instance>
+// export function makeJosmReflection<Instance>(instanceToAdapterFunc: (instance: Instance) => PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>, reverse?: false): SpecificJosmReflection<Instance> 
 export function makeJosmReflection<Instance, R extends PrimaryTransmissionAdapter | SecondaryStoreAdapter | Promise<PrimaryTransmissionAdapter | SecondaryStoreAdapter>>(instanceToAdapterFunc: (instance: Instance) => R, reverse?: boolean) {
   type PromOrNo<Val> = R extends Promise<any> ? Promise<Val> : Val
 
