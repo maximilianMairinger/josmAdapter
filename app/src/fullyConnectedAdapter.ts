@@ -154,9 +154,9 @@ export function dataBaseToAdapter(dataBase: Data | DataBase): PrimaryStoreAdapte
 }
 
 
-export function fullyConnectedJosmAdapter(adapter: PrimaryTransmissionAdapter, __inpAdapter: SecondaryStoreAdapter | ((initData: unknown) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)), isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
-export function fullyConnectedJosmAdapter(adapter: SecondaryTransmissionAdapter | ((initData: unknown) => (SecondaryTransmissionAdapter | Promise<SecondaryTransmissionAdapter>)), __inpAdapter: SecondaryStoreAdapter, isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
-export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapter | ((initData: unknown) => PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>), __inpAdapter: SecondaryStoreAdapter | ((initData: unknown) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)), _isInitiallyDominantDataSource?: boolean, _readOnly?: boolean | Data<boolean>) {
+export function fullyConnectedJosmAdapter<R extends SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>>(adapter: PrimaryTransmissionAdapter, __inpAdapter: R | ((initData: unknown) => R), isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
+export function fullyConnectedJosmAdapter<R extends SecondaryTransmissionAdapter | Promise<SecondaryTransmissionAdapter>>(adapter: R | ((initData: unknown) => R), __inpAdapter: SecondaryStoreAdapter, isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
+export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapter | ((initData: unknown) => PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>), __inpAdapter: SecondaryStoreAdapter | ((initData: unknown) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)), _isInitiallyDominantDataSource?: boolean, _readOnly?: boolean | Data<boolean>): any {
   const outIsFunc = _outAdapter instanceof Function
   if (outIsFunc) {
     const msg = (__inpAdapter as SecondaryStoreAdapter).msg()
@@ -228,6 +228,8 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
           else unsubscribeFromCurrentListener()
         })
       }
+
+      
     }
   
     if (isFunc) {
