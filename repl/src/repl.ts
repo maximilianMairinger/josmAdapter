@@ -10,9 +10,9 @@ declare const window: any
     whoop: false,
   })
 
+
   
   
   
-  
-  window.lel = lel.db
+  window.lel = lel
 })()
