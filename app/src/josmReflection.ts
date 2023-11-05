@@ -135,6 +135,7 @@ export function crawlCyclicAndCallFunc<D, O>(defaults: D, object: O, oneFunction
         for (const key of keys) {
           ret[key] = crawlCyclicAndCallFuncRec(defaults[key], object[key], [...path, key])
         } 
+        return ret
       }
       else return object
     }
@@ -151,11 +152,11 @@ export function crawlCyclicAndCallFunc<D, O>(defaults: D, object: O, oneFunction
     else throw new Error("Unexpected error")
   }
 
-  crawlCyclicAndCallFuncRec(defaults, object, [])
+  const r = crawlCyclicAndCallFuncRec(defaults, object, [])
   
 
-  if (proms.length > 0) return Promise.all(proms).then(() => object) as any
-  else return object as any
+  if (proms.length > 0) return Promise.all(proms).then(() => r) as any
+  else return r as any
 }
 
 
