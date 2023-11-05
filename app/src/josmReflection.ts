@@ -27,8 +27,8 @@ export type ObHasPromiseSomewhere<T> = PrimHasPromiseSomewhere<T> extends true ?
 export function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: SecondaryStoreAdapter, output: PrimOrObWrapped & T, reverse: true): ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : SpecificJosmReflectionRetA<Q> 
 export function josmReflection<DB extends Data<T> | DataBase<T>, T>(reflectionAdapter: SecondaryStoreAdapter, output: DB, reverse: true): {adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}
 
-export function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: PrimaryTransmissionAdapter, output: PrimOrObWrapped & T, reverse?: boolean): ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : "msg" extends keyof Ad ? Ad["msg"] extends (...a: any[]) => infer R ? IsAny<R> extends true ? SpecificJosmReflectionRetA<Q> : R extends Promise<any> ? R : SpecificJosmReflectionRetA<Q> : Promise<SpecificJosmReflectionRetA<Q>> : never 
-export function josmReflection<DB extends Data<T> | DataBase<T>, T>(reflectionAdapter: PrimaryTransmissionAdapter, output: DB, reverse?: boolean): {adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}
+export function josmReflection<T, Ad extends PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: Ad, output: PrimOrObWrapped & T, reverse?: false): ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : "msg" extends keyof Ad ? Ad["msg"] extends (...a: any[]) => infer R ? IsAny<R> extends true ? SpecificJosmReflectionRetA<Q> : R extends Promise<any> ? R : SpecificJosmReflectionRetA<Q> : Promise<SpecificJosmReflectionRetA<Q>> : never 
+export function josmReflection<DB extends Data<T> | DataBase<T>, T>(reflectionAdapter: PrimaryTransmissionAdapter, output: DB, reverse?: false): {adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}
 
 export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | SecondaryStoreAdapter, output: PrimOrObWrapped | Data | DataBase, reverse = false): any {
   const p = new ResablePromise<{adapter: PrimaryStoreAdapter, db: Data | DataBase}>()
@@ -76,8 +76,8 @@ type SpecificJosmReflection<Instance, Reverse extends boolean, Ad> = Reverse ext
     & (<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB) => Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>)
 
 
-export function makeJosmReflection<Instance, Ad extends PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>>(instanceToAdapterFunc: (instance: Instance) => Ad, reverse?: false): SpecificJosmReflection<Instance, false, Ad> 
 export function makeJosmReflection<Instance, Ad extends SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>>(instanceToAdapterFunc: (instance: Instance) => Ad, reverse: true): SpecificJosmReflection<Instance, true, Ad>
+export function makeJosmReflection<Instance, Ad extends PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>>(instanceToAdapterFunc: (instance: Instance) => Ad, reverse?: false): SpecificJosmReflection<Instance, false, Ad> 
 export function makeJosmReflection<Instance, R extends PrimaryTransmissionAdapter | SecondaryStoreAdapter | Promise<PrimaryTransmissionAdapter | SecondaryStoreAdapter>>(instanceToAdapterFunc: (instance: Instance) => R, reverse?: boolean): any {
 
   function specificJosmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T): ObHasPromiseSomewhere<T> extends true ? Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> : {adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}
