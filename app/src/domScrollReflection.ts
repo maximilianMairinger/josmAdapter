@@ -1,6 +1,5 @@
-import { PrimaryTransmissionAdapter, SecondaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
+import { isAdapterSym } from "./fullyConnectedAdapter"
 import { makeJosmReflection } from "./josmReflection";
-import { EventListener } from "extended-dom"
 import LinkedList from "fast-linked-list";
 
 

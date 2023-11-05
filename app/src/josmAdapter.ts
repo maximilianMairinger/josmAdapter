@@ -1,8 +1,5 @@
 export { 
-  Adapter, 
-  PrimaryStoreAdapter, 
-  SecondaryStoreAdapter, 
-  PrimaryTransmissionAdapter as TransmissionAdapter, 
+  Adapter,  
   isAdapterSym,
   dataBaseToAdapter,
   fullyConnectedJosmAdapter,
@@ -22,7 +19,7 @@ export {
 
 export { 
   scrollTargetToAdapter,
-  josmScrollReflection,
+  josmScrollReflection
 } from "./domScrollReflection"
 
 export {
