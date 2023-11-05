@@ -17,21 +17,18 @@ export type SecondaryTransmissionAdapter<Data = unknown> = {
 
 
 export type PrimaryTransmissionAdapter<Data = unknown> = {
-  // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
-  onMsg?(cb: (data: Data) => void): UnsubscribeFunc
   send(data: Data): void
-  msg(): Promise<Data> | Data
   closing?: Promise<void>
   [isAdapterSym]: true
+} & ({
+  // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
+  onMsg?(cb: (data: Data) => void): UnsubscribeFunc
+  msg(): Promise<Data> | Data
 } | {
   // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
   onMsg(cb: (data: Data) => void): UnsubscribeFunc
-  send(data: Data): void
   msg?(): Promise<Data> | Data
-  closing?: Promise<void>
-  [isAdapterSym]: true
-}
-
+})
 
 
 

@@ -6,7 +6,7 @@ import LinkedList from "fast-linked-list";
 
 
 
-export function scrollTargetToAdapter({target, dir}: {target: Element, dir: "x" | "y"}): PrimaryTransmissionAdapter {
+export function scrollTargetToAdapter({target, dir}: {target: Element, dir: "x" | "y"}) {
   const ls = new LinkedList<(data: unknown) => void>()
 
   const isX = dir === "x"
@@ -27,7 +27,7 @@ export function scrollTargetToAdapter({target, dir}: {target: Element, dir: "x" 
       return isX ? target.scrollLeft : target.scrollTop
     },
     [isAdapterSym]: true
-  }
+  } as const
 }
 
 

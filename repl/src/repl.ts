@@ -1,4 +1,4 @@
-import { josmLocalStorageReflection } from "../../app/src/josmAdapter"
+import { josmLocalStorageReflection, josmEventReflection } from "../../app/src/josmAdapter"
 
 
 declare const window: any
@@ -9,6 +9,8 @@ declare const window: any
   const lel = josmLocalStorageReflection("leltest", {
     whoop: false,
   })
+
+  
   
   
   

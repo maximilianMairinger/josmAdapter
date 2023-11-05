@@ -10,6 +10,11 @@ export {
   unifyDataAndDataBase
 } from "./fullyConnectedAdapter"
 
+export {
+  eventListenerToAdapter,
+  josmEventReflection
+} from "./domEventReflection"
+
 export { 
   makeJosmReflection,
   josmReflection

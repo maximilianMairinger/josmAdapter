@@ -6,7 +6,7 @@ import LinkedList from "fast-linked-list";
 
 
 
-export function eventListenerToAdapter({listener, value}: {listener: EventListener, value: () => unknown}): SecondaryStoreAdapter {
+export function eventListenerToAdapter({listener, value}: {listener: EventListener, value: () => unknown}) {
   const ls = new LinkedList<(data: unknown) => void>()
 
   listener.listener(() => {
@@ -15,14 +15,13 @@ export function eventListenerToAdapter({listener, value}: {listener: EventListen
   })
 
   return {
-
     onMsg(cb) {
       const tok = ls.push(cb)
       return tok.rm.bind(tok)
     },
     msg: value,
     [isAdapterSym]: true
-  }
+  } as const
 }
 
 

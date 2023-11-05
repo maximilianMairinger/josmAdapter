@@ -12,7 +12,7 @@ const exists = (filename: string) => fs.stat(filename).then(() => true).catch(()
 
 
 
-export async function fsToAdapter(fsPath: string): Promise<PrimaryTransmissionAdapter> {
+export async function fsToAdapter(fsPath: string) {
   const closing = new ResablePromise<string>()
   closing.then((reason) => {
     console.error("closing fsAdapter:", reason)
@@ -61,7 +61,7 @@ export async function fsToAdapter(fsPath: string): Promise<PrimaryTransmissionAd
     },
     closing: closing as Promise<any>,
     [isAdapterSym]: true
-  }
+  } as const
 }
 
 
