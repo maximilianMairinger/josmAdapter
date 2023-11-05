@@ -1,5 +1,6 @@
 {
   "name": "josm-adapter",
+  "sideEffects": false,
   "version": "1.0.5",
   "description": "Collection of various adapters for josm.",
   "main": "./app/dist/esm/josmAdapter.mjs",
