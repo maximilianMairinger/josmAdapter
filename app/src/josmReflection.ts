@@ -24,10 +24,10 @@ export type PrimHasPromiseSomewhere<T> = T extends Promise<any> ? true : T exten
 export type ObHasPromiseSomewhere<T> = PrimHasPromiseSomewhere<T> extends true ? true : T extends object ? {[key in keyof T]: ObHasPromiseSomewhere<T[key]>}[keyof T] extends false ? false : true : PrimHasPromiseSomewhere<T>
 
 
-export function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: SecondaryStoreAdapter, output: PrimOrObWrapped & T, reverse: true): ObHasPromiseSomewhere<T> extends true ? Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> : {adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>} 
+export function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: SecondaryStoreAdapter, output: PrimOrObWrapped & T, reverse: true): ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : SpecificJosmReflectionRetA<Q> 
 export function josmReflection<DB extends Data<T> | DataBase<T>, T>(reflectionAdapter: SecondaryStoreAdapter, output: DB, reverse: true): {adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}
 
-export function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: PrimaryTransmissionAdapter, output: PrimOrObWrapped & T, reverse?: boolean): Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> | {adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>} 
+export function josmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(reflectionAdapter: PrimaryTransmissionAdapter, output: PrimOrObWrapped & T, reverse?: boolean): ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : "msg" extends keyof Ad ? Ad["msg"] extends (...a: any[]) => infer R ? IsAny<R> extends true ? SpecificJosmReflectionRetA<Q> : R extends Promise<any> ? R : SpecificJosmReflectionRetA<Q> : Promise<SpecificJosmReflectionRetA<Q>> : never 
 export function josmReflection<DB extends Data<T> | DataBase<T>, T>(reflectionAdapter: PrimaryTransmissionAdapter, output: DB, reverse?: boolean): {adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}
 
 export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | SecondaryStoreAdapter, output: PrimOrObWrapped | Data | DataBase, reverse = false): any {
@@ -72,20 +72,22 @@ type SpecificJosmReflection<Instance, Reverse extends boolean, Ad> = Reverse ext
       (<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T) => ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : SpecificJosmReflectionRetA<Q>)
     & (<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB) => Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>)
   :
-      (<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T) => ObHasPromiseSomewhere<T> extends true ?  Promise<SpecificJosmReflectionRetA<Q>> : "msg" extends keyof Ad ? Ad["msg"] extends (...a: any[]) => infer R ? IsAny<R> extends true ? SpecificJosmReflectionRetA<Q> : R extends Promise<any> ? R : SpecificJosmReflectionRetA<Q> : Promise<SpecificJosmReflectionRetA<Q>> : never)
+      (<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T) => ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : "msg" extends keyof Ad ? Ad["msg"] extends (...a: any[]) => infer R ? IsAny<R> extends true ? SpecificJosmReflectionRetA<Q> : R extends Promise<any> ? R : SpecificJosmReflectionRetA<Q> : Promise<SpecificJosmReflectionRetA<Q>> : never)
     & (<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB) => Promise<{adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}>)
 
 
 export function makeJosmReflection<Instance, Ad extends PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>>(instanceToAdapterFunc: (instance: Instance) => Ad, reverse?: false): SpecificJosmReflection<Instance, false, Ad> 
 export function makeJosmReflection<Instance, Ad extends SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>>(instanceToAdapterFunc: (instance: Instance) => Ad, reverse: true): SpecificJosmReflection<Instance, true, Ad>
 export function makeJosmReflection<Instance, R extends PrimaryTransmissionAdapter | SecondaryStoreAdapter | Promise<PrimaryTransmissionAdapter | SecondaryStoreAdapter>>(instanceToAdapterFunc: (instance: Instance) => R, reverse?: boolean): any {
-  type PromOrNo<Val> = R extends Promise<any> ? Promise<Val> : Val
 
   function specificJosmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T): ObHasPromiseSomewhere<T> extends true ? Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> : {adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}
   function specificJosmReflection<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB): {adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}
   function specificJosmReflection(instance: Instance, output: PrimOrObWrapped | Data | DataBase): any {
     const ins = instanceToAdapterFunc(instance)
-    return ins instanceof Promise ? ins.then((ins) => josmReflection(ins as SecondaryStoreAdapter, output as PrimOrObWrapped, reverse as true)) : josmReflection(ins as PrimaryTransmissionAdapter, output as PrimOrObWrapped, reverse as false)
+    return ins instanceof Promise ? ins.then((ins) => josmReflection(ins as SecondaryStoreAdapter, output as PrimOrObWrapped, reverse as true).db) : (() => {
+      const r = josmReflection(ins as PrimaryTransmissionAdapter, output as PrimOrObWrapped, reverse as false)
+      return r instanceof Promise ? r.then((r) => r.db) : r.db
+    })()
   }
   return specificJosmReflection
 }

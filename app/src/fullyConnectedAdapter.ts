@@ -57,7 +57,7 @@ export type Adapter<D = unknown> = SecondaryTransmissionAdapter<D> | SecondarySt
 
 type ExtendedAdapter<Adapter> = Adapter & {onMsg(cb: (data: Data) => void, once?: boolean): UnsubscribeFunc}
 
-function _empowerAdapter<Ad, Data>(adapter: Ad & Adapter<Data>): ExtendedAdapter<Ad> {
+export function _empowerAdapter<Ad, Data>(adapter: Ad & Adapter<Data>): ExtendedAdapter<Ad> {
   const OGonMsg = adapter.onMsg
   if (OGonMsg !== undefined) adapter.onMsg = (cb: (data: Data) => void, once: boolean = false) => {
     let OGunsub: UnsubscribeFunc
@@ -86,7 +86,7 @@ const empowerAdapter = funcifyFunction(_empowerAdapter) as (<Ad, Data, Arg>(a: (
 
 
 
-function funcifyFunction<Arg, Ret>(f: (a: Arg) => Ret) {
+export function funcifyFunction<Arg, Ret>(f: (a: Arg) => Ret) {
   function funcify<MyArgs extends unknown[]>(a: Arg): Ret
   function funcify<MyArgs extends unknown[]>(a: Promise<Arg>): Promise<Ret>
   function funcify<MyArgs extends unknown[]>(a: (...args: MyArgs) => Arg): (...args: MyArgs) => Ret
@@ -259,7 +259,7 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
 export default fullyConnectedJosmAdapter
 
 
-function liberalizeAdapterMaker<Arg, Ret extends Adapter>(f: (arg: Arg) => Ret): (arg: Arg | Ret) => Ret {
+export function liberalizeAdapterMaker<Arg, Ret extends Adapter>(f: (arg: Arg) => Ret): (arg: Arg | Ret) => Ret {
   return (arg) => {
     if (arg[isAdapterSym]) return arg as Ret
     else return f(arg as Arg)
