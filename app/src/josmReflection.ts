@@ -35,7 +35,7 @@ export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | S
   let pVal: {adapter: PrimaryStoreAdapter, db: Data | DataBase}
   const mkJosmF = (storedData: unknown) => {
     let db: Data | DataBase
-    const outputIsntDB = output[instanceTypeSym] === undefined
+    const outputIsntDB = output === undefined || output === null || output[instanceTypeSym] === undefined
     if (outputIsntDB) {
       const data = crawlCyclicAndCallFunc(output as object, storedData)
       db = ((typeof output === "object" && output !== null) ? new DataBase(data) : new Data(data)) as Data | DataBase
