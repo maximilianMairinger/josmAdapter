@@ -1,5 +1,6 @@
 import { Data, DataBase, instanceTypeSym, DataBaseSubscription, DataSubscription, DataCollection } from "josm";
 import { cloneKeys } from "circ-clone"
+import { dataBaseToAdapter } from "./dataBaseAdapter";
 
 // export type WebSocketUrl = string | URL 
 
@@ -8,8 +9,8 @@ export const isAdapterSym = Symbol("isAdaperSym")
 type UnsubscribeFunc = () => void
 export type SecondaryTransmissionAdapter<Data = unknown> = {
   // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
-  onMsg?(cb: (data: Data) => void): UnsubscribeFunc
-  send(data: Data): void
+  onMsg?(cb: (data: Partial<Data>) => void): UnsubscribeFunc
+  send(dataDiff: Partial<Data>): void
   msg?(): Promise<Data> | Data
   closing?: Promise<void>
   [isAdapterSym]: true
@@ -17,16 +18,16 @@ export type SecondaryTransmissionAdapter<Data = unknown> = {
 
 
 export type PrimaryTransmissionAdapter<Data = unknown> = {
-  send(data: Data): void
+  send(data: Partial<Data>): void
   closing?: Promise<void>
   [isAdapterSym]: true
 } & ({
   // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
-  onMsg?(cb: (data: Data) => void): UnsubscribeFunc
+  onMsg?(cb: (data: Partial<Data>) => void): UnsubscribeFunc
   msg(): Promise<Data> | Data
 } | {
   // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
-  onMsg(cb: (data: Data) => void): UnsubscribeFunc
+  onMsg(cb: (data: Partial<Data>) => void): UnsubscribeFunc
   msg?(): Promise<Data> | Data
 })
 
@@ -34,8 +35,8 @@ export type PrimaryTransmissionAdapter<Data = unknown> = {
 
 export type SecondaryStoreAdapter<Data = unknown> = {
   // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
-  onMsg?(cb: (data: Data) => void): UnsubscribeFunc
-  send?(data: Data): void
+  onMsg?(cb: (data: Partial<Data>) => void): UnsubscribeFunc
+  send?(data: Partial<Data>): void
   msg(): Promise<Data> | Data
   closing?: Promise<void>
   [isAdapterSym]: true
@@ -44,8 +45,8 @@ export type SecondaryStoreAdapter<Data = unknown> = {
 
 export type PrimaryStoreAdapter<Data = unknown> = {
   // cb should be called with the data received parsed to a usable object/primitive (so JSON.parse if you use json), so with the (potential) transition done in send already undone. If once is true, cb should be called only once. Default is false
-  onMsg(cb: (data: Data) => void): UnsubscribeFunc
-  send(data: Data): void
+  onMsg(cb: (data: Partial<Data>) => void): UnsubscribeFunc
+  send(data: Partial<Data>): void
   msg(): Promise<Data> | Data
   closing?: Promise<void>
   [isAdapterSym]: true
@@ -59,7 +60,7 @@ type ExtendedAdapter<Adapter> = Adapter & {onMsg(cb: (data: Data) => void, once?
 
 export function _empowerAdapter<Ad, Data>(adapter: Ad & Adapter<Data>): ExtendedAdapter<Ad> {
   const OGonMsg = adapter.onMsg
-  if (OGonMsg !== undefined) adapter.onMsg = (cb: (data: Data) => void, once: boolean = false) => {
+  if (OGonMsg !== undefined) adapter.onMsg = (cb: (data: Partial<Data>) => void, once: boolean = false) => {
     let OGunsub: UnsubscribeFunc
     if (once) {
       OGunsub = OGonMsg((data) => {
@@ -98,57 +99,10 @@ export function funcifyFunction<Arg, Ret>(f: (a: Arg) => Ret) {
   return funcify
 }
 
-type UnifiedDataAndBase = {
-  get: ((cb: (data: any) => void, init?: boolean) => (DataSubscription<[unknown]> | DataBaseSubscription<[unknown]>)) & (() => (unknown)),
-  set: (val: any) => void
-}
-
-export function unifyDataAndDataBase(data_dataBase: Data<any> | DataBase): UnifiedDataAndBase {
-  if (data_dataBase[instanceTypeSym] === "Data") {
-    const data = data_dataBase as Data<any>
-    return {
-      get(cb?: (data: any) => void, init?: boolean) {
-        return data.get(cb, init)
-      },
-      set: data.set.bind(data)
-    }
-  }
-  else {
-    const dataBase = data_dataBase as DataBase
-    return {
-      get(cb?: (data: any) => void, init?: boolean) {
-        if (cb === undefined) return dataBase() as any
-        return dataBase((fullData, diffData) => {
-          cb(diffData)
-        }, true, init) as any as DataBaseSubscription<[unknown]>
-      },
-      set(val) {
-        dataBase(val)
-      }
-    }
-  }
-}
 
 
-export function dataBaseToAdapter(dataBase: Data | DataBase): PrimaryStoreAdapter {
-  const db = unifyDataAndDataBase(dataBase)
 
-  return {
-    onMsg(cb: (data: any) => void) {
-      const sub = db.get(cb, false)
-      return () => {
-        sub.deactivate()
-      }
-    },
-    send(data: any) {
-      db.set(data)
-    },
-    msg() {
-      return cloneKeys(db.get() as object)
-    },
-    [isAdapterSym]: true
-  }
-}
+
 
 
 export function fullyConnectedJosmAdapter<R extends SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>>(adapter: PrimaryTransmissionAdapter, __inpAdapter: R | ((initData: unknown) => R), isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
@@ -174,7 +128,7 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
   
   
   
-    const sendFunc = (data: any) => {
+    const sendToOutputFunc = (data: any) => {
       outAdapter.send(data)
     }
   
@@ -184,17 +138,19 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
         const msg = inpAdapter.msg()
         if (msg instanceof Promise) {
           msg.then((data) => {
-            sendFunc(data)
+            sendToOutputFunc(data)
           })
         }
-        else sendFunc(msg)
+        else sendToOutputFunc(msg)
       }
   
       let disabled = false
       if (inpAdapter.onMsg) {
         const unSub = inpAdapter.onMsg((msg) => {
           if (disabled) return
-          sendFunc(msg)
+          disabled = true
+          sendToOutputFunc(msg)
+          disabled = false
         })
         if (outAdapter.closing) outAdapter.closing.then(() => {
           unSub()
@@ -202,9 +158,10 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
       }
       
   
-      // this block is just for sending from inpAdapter to outAdapter, according to close state and readOnly state
+      // this block is just for sending from outAdapter to inpAdapter, according to close state and readOnly state
       if (inpAdapter.send !== undefined && outAdapter.onMsg !== undefined) {
         const setToData = (data: any) => {
+          if (disabled) return
           disabled = true
           inpAdapter.send(data)
           disabled = false

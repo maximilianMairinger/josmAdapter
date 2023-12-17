@@ -1,11 +1,14 @@
 export { 
   Adapter,  
   isAdapterSym,
-  dataBaseToAdapter,
   fullyConnectedJosmAdapter,
-  makeAdapterPair,
-  unifyDataAndDataBase
+  makeAdapterPair
 } from "./fullyConnectedAdapter"
+
+export { 
+  dataBaseToAdapter, 
+  unifyDataAndDataBase
+} from "./dataBaseAdapter"
 
 export {
   eventListenerToAdapter,

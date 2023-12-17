@@ -1,5 +1,6 @@
 import { Data, DataBase, instanceTypeSym } from "josm";
-import { fullyConnectedJosmAdapter, SecondaryStoreAdapter, PrimaryStoreAdapter, isAdapterSym, dataBaseToAdapter, SecondaryTransmissionAdapter, PrimaryTransmissionAdapter } from "./fullyConnectedAdapter";
+import { fullyConnectedJosmAdapter, SecondaryStoreAdapter, PrimaryStoreAdapter, isAdapterSym, SecondaryTransmissionAdapter, PrimaryTransmissionAdapter } from "./fullyConnectedAdapter";
+import { dataBaseToAdapter } from "./dataBaseAdapter"
 import { ResablePromise } from "more-proms";
 
 
@@ -38,6 +39,8 @@ export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | S
     const outputIsntDB = output === undefined || output === null || output[instanceTypeSym] === undefined
     if (outputIsntDB) {
       const data = crawlCyclicAndCallFunc(output as object, storedData)
+      // What if data is a promise here... shouldnt we await it?
+      // When josm supports it, do function evaluation in josm.
       db = ((typeof output === "object" && output !== null) ? new DataBase(data) : new Data(data)) as Data | DataBase
     }
     else db = output as Data | DataBase
@@ -127,7 +130,7 @@ export function crawlCyclicAndCallFunc<D, O>(defaults: D, object: O, oneFunction
   const proms = []
 
   function crawlCyclicAndCallFuncRec(defaults: unknown, object: unknown, path: string[]) {
-    if (typeof defaults !== typeof object && !(defaults instanceof Promise) && !(defaults instanceof Function) && (defaults !== undefined) && (object !== undefined)) throw new Error(`Type mismatch at "${path.join(".")}": ${typeof defaults} (default) !== ${typeof object} (disk)`)
+    if (typeof defaults !== typeof object && !(defaults instanceof Promise) && !(defaults instanceof Function) && (defaults !== undefined) && (object !== undefined)) throw new Error(`Type mismatch at "${path.join(".")}": ${typeof defaults} (default) !== ${typeof object} (stored)`)
     if (object !== undefined && typeof object !== "object") {
       return object
     }
