@@ -6,7 +6,7 @@ import { promises as fs } from "fs"
 import { stringify, parse } from "circ-json" // move data storage to be binary based
 import { ResablePromise } from "more-proms";
 import { parseEscapedRecursion } from "./dataBaseAdapter";
-
+import clone, { mergeKeysDeep } from "circ-clone"
 
 
 const exists = (filename: string) => fs.stat(filename).then(() => true).catch(() => false)
@@ -32,8 +32,14 @@ export async function fsToAdapter(fsPath: string) {
     closing.res(e.message)
   }
 
+  let abortFsWrite: AbortController
+  let currentlyWriting: Symbol = undefined
+  let tempFullStorage: Promise<any>
+  let tempDiffStorage: any
+
 
   async function msg() {
+    if (currentlyWriting) return tempFullStorage
     let storedData: unknown
     let rawStoredData: string
 
@@ -41,7 +47,7 @@ export async function fsToAdapter(fsPath: string) {
       storedData = parse(rawStoredData = await fs.readFile(fsPath, "utf8"))
     }
     catch(e) {
-      if (fileExists) if (rawStoredData !== "") {
+      if (await exists(fsPath)) if (rawStoredData !== "") {
         const txt = "fsPath exists, but is not a valid json"
         closing.res(txt)
         throw new Error(txt)
@@ -53,16 +59,33 @@ export async function fsToAdapter(fsPath: string) {
 
   return {
     msg,
-    async send(dataDiff: any) {
-      const data = parseDataDiff(await msg(), dataDiff)
+    async send(_dataDiff: any) {
+      let dataDiff = clone(_dataDiff)
+      if (currentlyWriting) {
+        abortFsWrite.abort()
+        mergeKeysDeep(dataDiff, tempDiffStorage)
+      }
+      abortFsWrite = new AbortController()
+
+      const stored = tempDiffStorage = msg()
+      const mySym = currentlyWriting = Symbol()
+      tempDiffStorage = dataDiff
+      tempFullStorage = stored.then((stored) => parseDataDiff(stored, dataDiff))
+      const data = await tempFullStorage
+      if (mySym !== currentlyWriting) return 
+      
+
       try {
-        if (data === undefined) await fs.writeFile(fsPath, "", "utf8")
-        else await fs.writeFile(fsPath, stringify(data), "utf8")
+        const str = data === undefined ? "" : stringify(data) 
+        await fs.writeFile(fsPath, str, { signal: abortFsWrite.signal, encoding: "utf8" })
       }
       catch(e) {
-        closing.res(e.message)
-        throw e
+        if (e.name !== "AbortError") {
+          closing.res(e.message)
+          throw e
+        }
       }
+      if (mySym === currentlyWriting) currentlyWriting = undefined
     },
     closing: closing as Promise<any>,
     [isAdapterSym]: true
@@ -82,6 +105,8 @@ export function parseDataDiff(full: any, diff: any) {
   else data = diff
   return data
 }
+
+
 
 
 export const josmFsReflection = makeJosmReflection(fsToAdapter)

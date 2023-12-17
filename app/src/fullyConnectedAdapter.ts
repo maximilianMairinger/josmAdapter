@@ -105,21 +105,24 @@ export function funcifyFunction<Arg, Ret>(f: (a: Arg) => Ret) {
 
 
 
-export function fullyConnectedJosmAdapter<R extends SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>>(adapter: PrimaryTransmissionAdapter, __inpAdapter: R | ((initData: unknown) => R), isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
-export function fullyConnectedJosmAdapter<R extends SecondaryTransmissionAdapter | Promise<SecondaryTransmissionAdapter>>(adapter: R | ((initData: unknown) => R), __inpAdapter: SecondaryStoreAdapter, isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): void
+export function fullyConnectedJosmAdapter<R extends SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>>(adapter: PrimaryTransmissionAdapter, __inpAdapter: R | ((initData: unknown) => R), isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): Promise<void>
+export function fullyConnectedJosmAdapter<R extends SecondaryTransmissionAdapter | Promise<SecondaryTransmissionAdapter>>(adapter: R | ((initData: unknown) => R), __inpAdapter: SecondaryStoreAdapter, isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): Promise<void>
 export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapter | ((initData: unknown) => PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>), __inpAdapter: SecondaryStoreAdapter | ((initData: unknown) => (SecondaryStoreAdapter | Promise<SecondaryStoreAdapter>)), _isInitiallyDominantDataSource?: boolean, _readOnly?: boolean | Data<boolean>): any {
+  
   const outIsFunc = _outAdapter instanceof Function
   if (outIsFunc) {
     const msg = (__inpAdapter as SecondaryStoreAdapter).msg()
     const f = (msg) => {
       const ret = _outAdapter(msg)
-      return ret instanceof Promise ? ret.then(runWithOut) : runWithOut(ret)
+      return ret instanceof Promise ? ret.then((ret) => {runWithOut(ret, {msg})}) : runWithOut(ret, {msg})
     }
     return msg instanceof Promise ? msg.then(f) : f(msg)
   }
   else return runWithOut(_outAdapter)
 
-  function runWithOut(_outAdapter: PrimaryTransmissionAdapter) {
+  
+
+  function runWithOut(_outAdapter: PrimaryTransmissionAdapter, inpMsg?: {msg: any}) {
     const outAdapter = empowerAdapter(_outAdapter)
     const isFunc = __inpAdapter instanceof Function && __inpAdapter[instanceTypeSym] !== "DataBase"
     const isInitiallyDominantDataSource: boolean = _isInitiallyDominantDataSource ?? !isFunc
@@ -127,34 +130,50 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
     const readOnlyData = typeof readOnly !== "boolean" ? readOnly : new Data(readOnly)
   
   
-  
-    const sendToOutputFunc = (data: any) => {
-      outAdapter.send(data)
+    if (isFunc) {
+      // onMsg or msg must be defined here, as it is required in the type definition
+      if (outAdapter.msg !== undefined) {
+        const msg = outAdapter.msg()
+        const f = (msg: SecondaryStoreAdapter) => {
+          const ret = __inpAdapter(msg)
+          return ret instanceof Promise ? ret.then((r) => runWithInp(r, {msg})) : runWithInp(ret, {msg})
+        }
+        return msg instanceof Promise ? msg.then(f) : f(msg as SecondaryStoreAdapter)
+      }
+      else {
+        outAdapter.onMsg(async (msg) => {
+          const ret = __inpAdapter(msg)
+          runWithInp(ret instanceof Promise ? await ret : ret, {msg})
+        }, true)
+      }
     }
+    else {
+      runWithInp(__inpAdapter as SecondaryStoreAdapter)
+    }
+    
   
-    const runWithInp = (_inpAdapter: SecondaryStoreAdapter) => {
+    function runWithInp (_inpAdapter: SecondaryStoreAdapter, outMsg?: {msg: any}) {
+      let raceProms = [] as any[]
       const inpAdapter = empowerAdapter(_inpAdapter)
       if (isInitiallyDominantDataSource) {
-        const msg = inpAdapter.msg()
-        if (msg instanceof Promise) {
-          msg.then((data) => {
-            sendToOutputFunc(data)
-          })
-        }
-        else sendToOutputFunc(msg)
+        const msg = inpMsg !== undefined ? inpMsg.msg : inpAdapter.msg()
+        raceProms.push(msg instanceof Promise ? msg.then((data) => outAdapter.send(data)) : outAdapter.send(msg))
       }
   
       let disabled = false
       if (inpAdapter.onMsg) {
-        const unSub = inpAdapter.onMsg((msg) => {
-          if (disabled) return
-          disabled = true
-          sendToOutputFunc(msg)
-          disabled = false
-        })
-        if (outAdapter.closing) outAdapter.closing.then(() => {
-          unSub()
-        })
+        raceProms.push(new Promise((res) => {
+          const unSub = inpAdapter.onMsg((msg) => {
+            if (disabled) return
+            disabled = true
+            res(outAdapter.send(msg))
+            disabled = false
+          })
+          if (outAdapter.closing) outAdapter.closing.then(() => {
+            unSub()
+          })
+        }));
+        
       }
       
   
@@ -183,30 +202,7 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
         })
       }
 
-      
-    }
-  
-    if (isFunc) {
-      // onMsg or msg must be defined here, as it is required in the type definition
-      if (outAdapter.msg !== undefined) {
-        const msg = outAdapter.msg()
-        const f = (msg: SecondaryStoreAdapter) => {
-          const ret = __inpAdapter(msg)
-          if (ret instanceof Promise) ret.then((r) => runWithInp(r))
-          else runWithInp(ret)
-        }
-        if (msg instanceof Promise) msg.then(f)
-        else f(msg as SecondaryStoreAdapter)
-      }
-      else {
-        outAdapter.onMsg(async (data) => {
-          const ret = __inpAdapter(data)
-          runWithInp(ret instanceof Promise ? await ret : ret)
-        }, true)
-      }
-    }
-    else {
-      runWithInp(__inpAdapter as SecondaryStoreAdapter)
+      return raceProms.some((p) => !(p instanceof Promise)) || raceProms.length === 0 ? undefined : Promise.race(raceProms)
     }
   }
 

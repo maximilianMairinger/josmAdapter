@@ -202,8 +202,8 @@ export function parseEscapedRecursion(rootStore: object, diff: object, mergeInto
 
   function rec(diff: any, mergeInto: object = {}) {
     if (diff instanceof Object) {
-      if (known.has(diff)) return
-      known.add(diff)
+      if (known.has(mergeInto)) return mergeInto
+      known.add(mergeInto)
 
       for (const key in diff) {
         const val = diff[key]

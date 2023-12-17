@@ -16,7 +16,6 @@ export function localStorageToAdapter(id: string) {
   return {
     msg,
     send(diff: any) {
-      debugger
       const data = parseDataDiff(msg(), diff)
       localStorage.setItem(id, stringify(data))
     },

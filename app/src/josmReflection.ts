@@ -39,7 +39,7 @@ export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | S
     const outputIsntDB = output === undefined || output === null || output[instanceTypeSym] === undefined
     if (outputIsntDB) {
       const data = crawlCyclicAndCallFunc(output as object, storedData)
-      // What if data is a promise here... shouldnt we await it?
+      // What if data is a promise here... shouldn't we await it?
       // When josm supports it, do function evaluation in josm.
       db = ((typeof output === "object" && output !== null) ? new DataBase(data) : new Data(data)) as Data | DataBase
     }
@@ -56,11 +56,10 @@ export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | S
     p.res(pVal = {db, adapter})
     return adapter
   }
-  if (!reverse) fullyConnectedJosmAdapter(reflectionAdapter as PrimaryTransmissionAdapter, mkJosmF, true, true)
-  else fullyConnectedJosmAdapter(mkJosmF, reflectionAdapter as SecondaryStoreAdapter, true, true)
+  let r = !reverse ? fullyConnectedJosmAdapter(reflectionAdapter as PrimaryTransmissionAdapter, mkJosmF, true, true)
+  : fullyConnectedJosmAdapter(mkJosmF, reflectionAdapter as SecondaryStoreAdapter, true, true)
 
-  if (pVal !== undefined) return pVal
-  else return p
+  return r instanceof Promise ? r.then(() => p) : pVal !== undefined ? pVal : p
 }
 
 
@@ -73,11 +72,13 @@ type SpecificJosmReflectionRetA<Q> = Q extends object ? DataBase<Q> : Data<Q>
 type SpecificJosmReflectionRetB<DB> = DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never
 
 
+type AdMsgRet<Ad, Q> = "msg" extends keyof Ad ? Ad["msg"] extends (...a: any[]) => infer R ? IsAny<R> extends true ? SpecificJosmReflectionRetA<Q> : R extends Promise<any> ? Promise<SpecificJosmReflectionRetA<Q>> : SpecificJosmReflectionRetA<Q> : Promise<SpecificJosmReflectionRetA<Q>> : never
+
 type SpecificJosmReflection<Instance, Reverse extends boolean, Ad> = Reverse extends true ?
       (<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T) => ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : SpecificJosmReflectionRetA<Q>)
     & (<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB) => Ad extends Promise<any> ? Promise<SpecificJosmReflectionRetB<DB>> : SpecificJosmReflectionRetB<DB>)
   :
-      (<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T) => ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : "msg" extends keyof Ad ? Ad["msg"] extends (...a: any[]) => infer R ? IsAny<R> extends true ? SpecificJosmReflectionRetA<Q> : R extends Promise<any> ? R : SpecificJosmReflectionRetA<Q> : Promise<SpecificJosmReflectionRetA<Q>> : never)
+      (<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T) => ObHasPromiseSomewhere<T> extends true ? Promise<SpecificJosmReflectionRetA<Q>> : Ad extends Promise<infer Add> ? AdMsgRet<Add, Q> : AdMsgRet<Ad, Q>)
     & (<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB) => Ad extends Promise<any> ? Promise<SpecificJosmReflectionRetB<DB>> : SpecificJosmReflectionRetB<DB>)
 
 
@@ -89,7 +90,7 @@ export function makeJosmReflection<Instance, R extends PrimaryTransmissionAdapte
   function specificJosmReflection<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB): {adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}
   function specificJosmReflection(instance: Instance, output: PrimOrObWrapped | Data | DataBase): any {
     const ins = instanceToAdapterFunc(instance)
-    return ins instanceof Promise ? ins.then((ins) => josmReflection(ins as SecondaryStoreAdapter, output as PrimOrObWrapped, reverse as true).db) : (() => {
+    return ins instanceof Promise ? ins.then((ins) => josmReflection(ins as SecondaryStoreAdapter, output as PrimOrObWrapped, reverse as true)).then(e => e.db) : (() => {
       const r = josmReflection(ins as PrimaryTransmissionAdapter, output as PrimOrObWrapped, reverse as false)
       return r instanceof Promise ? r.then((r) => r.db) : r.db
     })()
@@ -123,7 +124,8 @@ export function callInOrder() {
 
 
 export function crawlCyclicAndCallFunc<D, O>(defaults: D, object: O, oneFunctionCallAtATime = true): DefaultVal<D> | Promise<DefaultVal<D>> {
-  const store = new Map()
+  const objectStore = new Set()
+
 
   const callFunc = oneFunctionCallAtATime ? callInOrder() : (f: Function) => f()
 
@@ -141,15 +143,14 @@ export function crawlCyclicAndCallFunc<D, O>(defaults: D, object: O, oneFunction
 
     if (typeof object === "object" && object !== null) {
       if (typeof defaults === "object" && object !== null) {
-        const ret = {}
-        if (store.has(defaults)) return store.get(defaults)
-        store.set(store, ret)
+        if (objectStore.has(object)) return object
+        objectStore.add(objectStore)
 
         const keys = new Set([...Object.keys(defaults), ...Object.keys(object)])
         for (const key of keys) {
-          ret[key] = crawlCyclicAndCallFuncRec(defaults[key], object[key], [...path, key])
+          object[key] = crawlCyclicAndCallFuncRec(defaults[key], object[key], [...path, key])
         } 
-        return ret
+        return object
       }
       else return object
     }
