@@ -75,8 +75,8 @@ export function parseDataDiff(full: any, diff: any) {
   if (typeof diff === "object" && diff !== null) { 
     if (typeof full !== "object" || full === null) data = diff
     else {
-      const merge = parseEscapedRecursion(full)
-      data = merge(diff)
+      data = parseEscapedRecursion(full, diff, false)
+      
     }
   }
   else data = diff

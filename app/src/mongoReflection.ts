@@ -43,7 +43,7 @@ export async function mongoToAdapter(db: Collection<any>) {
     return _id
   }
 
-
+  // does this ensure that no malicious _id are set?
   function mergeObjectToMongoObject(object: object, _id: any) {
     const memoJsToMongo: Map<object, ObjectId | Promise<ObjectId>> = new Map()
     return recMergeObjectToMongoObjectRec(object, _id)

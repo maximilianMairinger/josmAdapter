@@ -10,12 +10,13 @@ export function localStorageToAdapter(id: string) {
   function msg() {
     const storedData = localStorage.getItem(id)
     if (storedData === null) return undefined
-    return parse(storedData) 
+    return parse(storedData)
   }
 
   return {
     msg,
     send(diff: any) {
+      debugger
       const data = parseDataDiff(msg(), diff)
       localStorage.setItem(id, stringify(data))
     },

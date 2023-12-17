@@ -1,7 +1,7 @@
 import { Data, DataBase, instanceTypeSym, DataBaseSubscription, DataSubscription, internalDataBaseBridge, dataBaseParsingId as parsingId } from "josm"
 import { PrimaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import cloneKeys from "circ-clone"
-import { resolvePointer, toPointer } from "./mongoRelfection"
+import { resolvePointer, toPointer } from "./mongoReflection"
 import { MultiMap } from "more-maps"
 
 
@@ -60,20 +60,17 @@ export function dataBaseToAdapter(data_dataBase: Data | DataBase): PrimaryStoreA
   else {
     const db = data_dataBase as DataBase
 
-    const mergeOldRecursionToMyDB = parseEscapedRecursion(db())
-
     return {
       msg() {
         return db()
       },
       send(dataDiff: any) {
         if (typeof dataDiff !== "object" || dataDiff === null) throw new Error("dataDiff must be an object")
-        db(mergeOldRecursionToMyDB(dataDiff))
+        db(parseEscapedRecursion(db(), dataDiff))
       },
       onMsg(cb: (data: any) => void) {
         const r = db(function subFunc(full, diff) {
-          escapeRecursion(diff, subFunc)
-          cb(diff)
+          cb(escapeRecursion(diff, subFunc))
         }, true, false) as any
         return () => {r.deactivate()}
       },
@@ -195,9 +192,15 @@ function getParents(db: InternalDataBase<{}>) {
 
 
 
-export function parseEscapedRecursion(rootStore: object) {
-  let known: Set<any>
-  function rec(diff: object) {
+export function parseEscapedRecursion(rootStore: object, diff: object, mergeIntoDiff = true) {
+  let known = new Set()
+
+  const mergeInto = mergeIntoDiff ? diff : rootStore
+  rec(diff, mergeInto)
+  return mergeInto
+
+
+  function rec(diff: any, mergeInto: object = {}) {
     if (diff instanceof Object) {
       if (known.has(diff)) return
       known.add(diff)
@@ -217,16 +220,12 @@ export function parseEscapedRecursion(rootStore: object) {
           }
         }
         else {
-          const ret = rec(diff[key])
-          if (ret !== undefined) diff[key] = ret
+          const ret = rec(val, mergeInto[key])
+          if (Object.hasOwn(mergeInto, key) || !(key in Object.prototype)) mergeInto[key] = ret
         }
       }
+      return mergeInto
     }
-  }
-  return function mergeOldRecursion(diff: object) {
-    known = new Set()
-    rec(diff)
-    known = undefined
-    return diff
+    else return diff
   }
 }
