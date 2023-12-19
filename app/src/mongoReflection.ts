@@ -43,7 +43,7 @@ export async function mongoToAdapter(db: Collection<any>) {
     return _id
   }
 
-  // does this ensure that no malicious _id are set?
+  // does this ensure that no malicious _id are set? A: no, but mongo throws if we try, as it is immutable. And I think throwing is better than ignoring in this case.
   function mergeObjectToMongoObject(object: object, _id: any) {
     const memoJsToMongo: Map<object, ObjectId | Promise<ObjectId>> = new Map()
     return recMergeObjectToMongoObjectRec(object, _id)
@@ -224,4 +224,4 @@ export async function mongoToAdapter(db: Collection<any>) {
 
 
 
-export const josmLocalStorageReflection = makeJosmReflection(mongoToAdapter)
+export const josmMongoReflection = makeJosmReflection(mongoToAdapter)
