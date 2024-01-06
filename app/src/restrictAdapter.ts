@@ -3,9 +3,9 @@ import { any } from "sanitize-against"
 import { cloneKeysAndMapProps } from "circ-clone"
 
 
-export function restrictAdapter<T>(adapter: Adapter<T>, {write: checkWrite = (e) => e, read: checkRead = (e) => e}: {write?: <MyT extends Partial<T>>(t: MyT) => Partial<MyT>, read?: (t: T) => Partial<T>}) {
+export function restrictAdapter<Ad extends {msg?: Function, onMsg?: Function, send?: Function}>(adapter: Ad, {write: checkWrite = (e) => e, read: checkRead = (e) => e}: {write?: Function, read?: Function}): Ad {
   if (adapter.msg !== undefined) {
-    const promCheckRead = promifyFunction(checkRead)
+    const promCheckRead = promifyFunction(checkRead as ((a: undefined) => unknown))
     const ogMsg = adapter.msg.bind(adapter)
     adapter.msg = () => {
       return promCheckRead(ogMsg()) as any

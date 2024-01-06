@@ -46,3 +46,8 @@ export {
   websocketJosmAdapterClient,
   wsToAdapter
 } from "./wsAdapter"
+
+export {
+  reflectionToSaniTemplate,
+  restrictAdapter
+} from "./restrictAdapter"
