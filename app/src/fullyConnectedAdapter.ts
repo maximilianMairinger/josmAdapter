@@ -86,6 +86,16 @@ const empowerAdapter = funcifyFunction(_empowerAdapter) as (<Ad, Data, Arg>(a: (
 
 
 
+export function promifyFunction<Arg, Ret>(f: (a: Arg) => Ret) {
+  function promify(a: Arg): Promise<Ret>
+  function promify(a: Promise<Arg>): Promise<Ret>
+  function promify(a: Arg | Promise<Arg>) {
+    if (a instanceof Promise) return a.then((a) => f(a))
+    else return f(a)
+  }
+  return promify
+}
+
 
 export function funcifyFunction<Arg, Ret>(f: (a: Arg) => Ret) {
   function funcify<MyArgs extends unknown[]>(a: Arg): Ret
@@ -112,19 +122,19 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
   const outIsFunc = _outAdapter instanceof Function
   if (outIsFunc) {
     const msg = (__inpAdapter as SecondaryStoreAdapter).msg()
-    const f = (msg) => {
+    const f = (msg: any) => {
       const ret = _outAdapter(msg)
       return ret instanceof Promise ? ret.then((ret) => {runWithOut(ret, {msg})}) : runWithOut(ret, {msg})
     }
-    return msg instanceof Promise ? msg.then(f) : f(msg)
+    return msg instanceof Promise ? msg.then(f as any) : f(msg)
   }
-  else return runWithOut(_outAdapter)
+  else return runWithOut(_outAdapter as PrimaryTransmissionAdapter)
 
   
 
   function runWithOut(_outAdapter: PrimaryTransmissionAdapter, inpMsg?: {msg: any}) {
     const outAdapter = empowerAdapter(_outAdapter)
-    const isFunc = __inpAdapter instanceof Function && __inpAdapter[instanceTypeSym] !== "DataBase"
+    const isFunc = __inpAdapter instanceof Function
     const isInitiallyDominantDataSource: boolean = _isInitiallyDominantDataSource ?? !isFunc
     const readOnly: boolean | Data<boolean> = _readOnly ?? isInitiallyDominantDataSource
     const readOnlyData = typeof readOnly !== "boolean" ? readOnly : new Data(readOnly)
@@ -136,15 +146,22 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
         const msg = outAdapter.msg()
         const f = (msg: SecondaryStoreAdapter) => {
           const ret = __inpAdapter(msg)
-          return ret instanceof Promise ? ret.then((r) => runWithInp(r, {msg})) : runWithInp(ret, {msg})
+          ret instanceof Promise ? ret.then((r) => runWithInp(r, {msg})) : runWithInp(ret, {msg})
+          // It is intentional that runWithInp is not awaited here, as it only resolves when inpAdapter has a msg rdy. Which will probably not happen if we have to wait for outAdapter to give us a init msg first.
+          return ret
         }
         return msg instanceof Promise ? msg.then(f) : f(msg as SecondaryStoreAdapter)
       }
       else {
-        outAdapter.onMsg(async (msg) => {
-          const ret = __inpAdapter(msg)
-          runWithInp(ret instanceof Promise ? await ret : ret, {msg})
-        }, true)
+        return new Promise<void>(async (res) => {
+          outAdapter.onMsg(async (msg) => {
+            const ret = __inpAdapter(msg)
+            runWithInp(ret instanceof Promise ? await ret : ret, {msg})
+            // It is intentional that runWithInp is not awaited here, as it only resolves when inpAdapter has a msg rdy. Which will probably not happen if we have to wait for outAdapter to give us a init msg first.
+            res()
+          }, true)
+        })
+        
       }
     }
     else {
@@ -159,6 +176,8 @@ export function fullyConnectedJosmAdapter(_outAdapter: PrimaryTransmissionAdapte
         const msg = inpMsg !== undefined ? inpMsg.msg : inpAdapter.msg()
         raceProms.push(msg instanceof Promise ? msg.then((data) => outAdapter.send(data)) : outAdapter.send(msg))
       }
+
+      
   
       let disabled = false
       if (inpAdapter.onMsg) {
@@ -219,20 +238,32 @@ export function liberalizeAdapterMaker<Arg, Ret extends Adapter>(f: (arg: Arg) =
   }
 }
 
-const liberalDataBaseToAdapter = funcifyFunction(liberalizeAdapterMaker(dataBaseToAdapter))
+
+
+const liberalDataBaseToAdapter = liberalizeAdapterMaker(dataBaseToAdapter)
+const f_liberalDataBaseToAdapter = funcifyFunction(liberalDataBaseToAdapter)
+
+// this needs to be treated seperatly and not by the funcify function, as DB is instanceof Function and we need to make a special check here, to distinguish these two.
+function funcifiedAndLiberalizedDataBaseToAdapter(db: Adapter | Data | DataBase | ((initData: unknown) => Adapter | Data | DataBase) | Promise<Adapter | Data | DataBase>): PrimaryStoreAdapter {
+  if (db[instanceTypeSym] === undefined) return f_liberalDataBaseToAdapter(db as any)
+  else return liberalDataBaseToAdapter(db as Data | DataBase)
+}
 
 
 export function makeAdapterPair<Instance>(instanceToAdapterFunc: (instance: Instance) => (PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>)) {
+
+  
   function josmAdapterServer<Dat extends Data | DataBase | SecondaryStoreAdapter>(instance: Instance, data_dataBase: Dat, isInitiallyDominantDataSource: boolean, readOnly?: boolean | Data<boolean>): Promise<Dat>
   function josmAdapterServer<Dat extends Data | DataBase>(instance: Instance, data_dataBase: (initData: unknown) => Dat, readOnly?: boolean | Data<boolean>): Promise<Dat>
   async function josmAdapterServer<Dat extends Data | DataBase | SecondaryStoreAdapter>(instance: Instance, data_dataBase: Dat | ((initData: unknown) => Dat), isInitiallyDominantDataSource_readOnly?: boolean | Data<boolean>, _readOnly?: boolean | Data<boolean>) {
-    return fullyConnectedJosmAdapter(await instanceToAdapterFunc(instance), liberalDataBaseToAdapter(data_dataBase as Data | DataBase), isInitiallyDominantDataSource_readOnly as any, _readOnly)
+    return fullyConnectedJosmAdapter(await instanceToAdapterFunc(instance), funcifiedAndLiberalizedDataBaseToAdapter(data_dataBase as Data | DataBase), isInitiallyDominantDataSource_readOnly as any, _readOnly)
   }
 
   function josmAdapterClient(p: Instance, readOnly: boolean | Data<boolean> = false): Promise<Data<any> | DataBase> {
+    let db: Data<any> | DataBase
     return josmAdapterServer(p, (initData) => {
-      return (typeof initData === "object" && initData !== null ? new DataBase(initData) : new Data(initData)) as Data | DataBase
-    }, readOnly)
+      return db = (typeof initData === "object" && initData !== null ? new DataBase(initData) : new Data(initData)) as Data | DataBase
+    }, readOnly).then(() => db)
   }
 
   return {

@@ -4,22 +4,23 @@ import { WebSocket as NodeWebSocket } from "ws";
 import { PrimaryTransmissionAdapter, makeAdapterPair, isAdapterSym } from "./fullyConnectedAdapter"
 
 
-type Ws = WebSocket | NodeWebSocket
 
+export function wsToAdapter(_ws: WebSocket | NodeWebSocket): Promise<PrimaryTransmissionAdapter> {
+  const ws = _ws as NodeWebSocket
+  const WebSocket = ws.constructor as any
 
-export function wsToAdapter(ws: WebSocket): Promise<PrimaryTransmissionAdapter> {
   return new Promise<PrimaryTransmissionAdapter>((_res) => {
     function res() {
       _res({
         send(data) {
           ws.send(stringify(data))
         },
-        onMsg(cb, once: boolean = false) {
-          const listener = (ev: MessageEvent) => {
+        onMsg(cb) {
+          const listener: any = (ev: MessageEvent) => {
             if (ws.readyState !== WebSocket.OPEN) return
             cb(parse(ev.data))
           }
-          ws.addEventListener("message", listener, { once })
+          ws.addEventListener("message", listener)
           return () => {
             try {
               ws.removeEventListener("message", listener)
@@ -31,7 +32,11 @@ export function wsToAdapter(ws: WebSocket): Promise<PrimaryTransmissionAdapter> 
           }
         },
         closing: new Promise((res) => {
-          ws.addEventListener("closing", res as any, {once: true})
+          try {
+            ws.addEventListener("closing" as any, res as any, {once: true})
+          }
+          catch(e){}
+          
           ws.addEventListener("close", res as any, {once: true})
         }),
         [isAdapterSym]: true

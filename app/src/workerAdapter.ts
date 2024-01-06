@@ -8,11 +8,11 @@ export function workerToAdapter(worker: Work): PrimaryTransmissionAdapter {
     send(data) {
       worker.postMessage(data)
     },
-    onMsg(cb, once: boolean = false) {
+    onMsg(cb) {
       const listener = (ev: MessageEvent) => {
         cb(ev.data)
       }
-      worker.addEventListener("message", listener, { once })
+      worker.addEventListener("message", listener)
       return () => {
         try {
           worker.removeEventListener("message", listener)

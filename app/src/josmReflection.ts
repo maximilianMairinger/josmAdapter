@@ -86,8 +86,8 @@ export function makeJosmReflection<Instance, Ad extends SecondaryStoreAdapter | 
 export function makeJosmReflection<Instance, Ad extends PrimaryTransmissionAdapter | Promise<PrimaryTransmissionAdapter>>(instanceToAdapterFunc: (instance: Instance) => Ad, reverse?: false): SpecificJosmReflection<Instance, false, Ad> 
 export function makeJosmReflection<Instance, R extends PrimaryTransmissionAdapter | SecondaryStoreAdapter | Promise<PrimaryTransmissionAdapter | SecondaryStoreAdapter>>(instanceToAdapterFunc: (instance: Instance) => R, reverse?: boolean): any {
 
-  function specificJosmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T): ObHasPromiseSomewhere<T> extends true ? Promise<{adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}> : {adapter: PrimaryStoreAdapter, db: Q extends object ? DataBase<Q> : Data<Q>}
-  function specificJosmReflection<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB): {adapter: PrimaryStoreAdapter, db: DB extends Data<infer R> ? R : DB extends DataBase<infer R> ? R : never}
+  function specificJosmReflection<T, Q extends DefaultVal<T> = DefaultVal<T>>(instance: Instance, output: PrimOrObWrapped & T): ObHasPromiseSomewhere<T> extends true ? Promise<Q extends object ? DataBase<Q> : Data<Q>> : Q extends object ? DataBase<Q> : Data<Q>
+  function specificJosmReflection<DB extends Data<T> | DataBase<T>, T>(instance: Instance, output: DB): DB
   function specificJosmReflection(instance: Instance, output: PrimOrObWrapped | Data | DataBase): any {
     const ins = instanceToAdapterFunc(instance)
     return ins instanceof Promise ? ins.then((ins) => josmReflection(ins as SecondaryStoreAdapter, output as PrimOrObWrapped, reverse as true)).then(e => e.db) : (() => {

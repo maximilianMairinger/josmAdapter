@@ -1,66 +1,31 @@
-import { josmLocalStorageReflection, josmEventReflection, josmFsReflection } from "../../app/src/josmAdapter"
+import { DataBase } from "josm"
+import { josmLocalStorageReflection, josmEventReflection, josmFsReflection, websocketJosmAdapterClient } from "../../app/src/josmAdapter"
+import wsUrlify from "normalize-ws-url-protocol"
 import clone from "circ-clone"
-import fs from "fs"
-import path from "path"
-import { josmMongoReflection } from "../../app/src/mongoReflection"
-import { Collection, MongoClient } from "mongodb"
 
 
 declare const window: any
 
-function getCurStore(mongo: Collection) {
-  return mongo.find({}).toArray()
-}
+// function getCurStore(mongo: Collection) {
+//   return mongo.find({}).toArray()
+// }
 
 
 (async () => {
-  // localStorage.clear()
 
-  // fs.unlinkSync(path.resolve("leltest"))
 
-  const client = await MongoClient.connect("mongodb://localhost:27017")
-  const superDB = client.db("test123")
-  const db = superDB.collection("lel123")
+  const db = await websocketJosmAdapterClient(new WebSocket(wsUrlify("con1"))) as DataBase
 
-  // await db.deleteMany({})
-  debugger
-  const lel = await josmMongoReflection(db, {
-    whoop: false,
+
+  db((full, diff) => {
+    console.log(diff)
   })
 
-
-  console.log("-----")
-  console.log(clone(lel()))
-  console.log(await getCurStore(db))
-
-
-
-  // const ob = {
-  //   q: 1,
-  //   circ1: {q: 2}
-  // } as any
-
-  
-
-
-  // lel(ob)
-  // console.log("-----")
-  // console.log(clone(lel()))
-  // console.log(await getCurStore(db))
+  window.db = db
 
 
 
 
-  // lel({circ1: {circ2: lel()}})
-
-  // console.log("-----")
-  // console.log(clone(lel()))
-  // console.log(await getCurStore(db))
 
 
-
-  // await client.close()
-  
-  
-  // window.lel = lel
 })()
