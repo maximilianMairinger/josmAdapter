@@ -8,7 +8,7 @@ export function restrictAdapter<Ad extends {msg?: Function, onMsg?: Function, se
     const promCheckRead = promifyFunction(checkRead as ((a: undefined) => unknown))
     const ogMsg = adapter.msg.bind(adapter)
     adapter.msg = () => {
-      return promCheckRead(ogMsg()) as any
+      return promCheckRead(ogMsg())
     }
   }
   if (adapter.onMsg !== undefined) {
@@ -22,7 +22,9 @@ export function restrictAdapter<Ad extends {msg?: Function, onMsg?: Function, se
   if (adapter.send !== undefined) {
     const ogSend = adapter.send.bind(adapter)
     adapter.send = (e) => {
-      return ogSend(checkWrite(e)) as any
+      const toBeSent = checkWrite(e)
+      if (typeof toBeSent === "object" && toBeSent !== null && Object.keys(toBeSent).length === 0) return
+      ogSend(toBeSent)
     }
   }
   return adapter
