@@ -76,10 +76,12 @@
   "dependencies": {
     "circ-clone": "^2.7.1",
     "circ-json": "^1.0.4",
+    "circ-msgpack": "^1.0.0",
     "colorful-cli-logger": "^1.0.0",
     "commander": "^10.0.1",
     "extended-dom": "^4.1.14",
     "fast-linked-list": "^3.2.3",
+    "idb": "^8.0.0",
     "josm": "^1.7.43",
     "mkdirp": "^3.0.1",
     "more-maps": "^2.1.0",

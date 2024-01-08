@@ -200,12 +200,17 @@ export function parseEscapedRecursion(rootStore: object, diff: object, mergeInto
   return mergeInto
 
 
-  function rec(diff: any, mergeInto: object = {}) {
-    if (diff instanceof Object) {
-      if (known.has(mergeInto)) return mergeInto
-      known.add(mergeInto)
+  function rec(diff: any, mergeInto?: object) {
+    
+    if (typeof diff === "object" && diff !== null) {
+      const mergeIntoIsObj = typeof mergeInto === "object" && mergeInto !== null
+      if (mergeIntoIsObj) {
+        if (known.has(mergeInto)) return mergeInto
+        known.add(mergeInto)
+      }
+      
 
-      for (const key in diff) {
+      for (const key of Object.keys(diff)) {
         const val = diff[key]
         if (key === "$ref" && typeof val === "string") {
           if (val.startsWith("##")) diff[key] = val.slice(1)
@@ -220,8 +225,10 @@ export function parseEscapedRecursion(rootStore: object, diff: object, mergeInto
           }
         }
         else {
-          const ret = rec(val, mergeInto[key])
-          if (Object.hasOwn(mergeInto, key) || !(key in Object.prototype)) mergeInto[key] = ret
+          // length of array can be set this way... 
+          if (mergeIntoIsObj && (Object.hasOwn(mergeInto, key) || mergeInto[key] === undefined)) {
+            mergeInto[key] = rec(val, mergeInto[key])
+          }
         }
       }
       return mergeInto

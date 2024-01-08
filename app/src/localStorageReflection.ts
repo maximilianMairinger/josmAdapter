@@ -1,7 +1,8 @@
 import { parseDataDiff } from "./fsReflection";
 import { PrimaryTransmissionAdapter, SecondaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import { makeJosmReflection } from "./josmReflection";
-import { stringify, parse } from "circ-json" // move this to binary
+// circ-json doesnt support undefined!!!! I think this is ok though, as this is only used as reflection.
+import { stringify, parse } from "circ-json" // cant use msgpack because. local storage is string only and I did not find a good way to encode binary to string. Use indexDBAdapter instead
 
 
 

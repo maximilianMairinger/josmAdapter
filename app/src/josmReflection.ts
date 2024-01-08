@@ -41,6 +41,7 @@ export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | S
       const data = crawlCyclicAndCallFunc(output as object, storedData)
       // What if data is a promise here... shouldn't we await it?
       // When josm supports it, do function evaluation in josm.
+      // Can we use sanitize-against here? It would have function eval, and defaults, right?
       db = ((typeof output === "object" && output !== null) ? new DataBase(data) : new Data(data)) as Data | DataBase
     }
     else db = output as Data | DataBase

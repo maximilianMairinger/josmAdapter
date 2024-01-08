@@ -3,7 +3,7 @@ import { makeJosmReflection } from "./josmReflection";
 import { mkdirp } from "mkdirp"
 import path from "path"
 import { promises as fs } from "fs"
-import { stringify, parse } from "circ-json" // move data storage to be binary based
+import { encode, decode } from "circ-msgpack"
 import { ResablePromise } from "more-proms";
 import { parseEscapedRecursion } from "./dataBaseAdapter";
 import clone, { mergeKeysDeep } from "circ-clone"
@@ -41,14 +41,13 @@ export async function fsToAdapter(fsPath: string) {
   async function msg() {
     if (currentlyWriting) return tempFullStorage
     let storedData: unknown
-    let rawStoredData: string
 
     try {
-      storedData = parse(rawStoredData = await fs.readFile(fsPath, "utf8"))
+      storedData = encode(await fs.readFile(fsPath))
     }
     catch(e) {
-      if (await exists(fsPath)) if (rawStoredData !== "") {
-        const txt = "fsPath exists, but is not a valid json"
+      if (await exists(fsPath)) {
+        const txt = "fsPath exists, but is well formatted. Error msg: " + e.message
         closing.res(txt)
         throw new Error(txt)
       }
@@ -76,8 +75,8 @@ export async function fsToAdapter(fsPath: string) {
       
 
       try {
-        const str = data === undefined ? "" : stringify(data) 
-        await fs.writeFile(fsPath, str, { signal: abortFsWrite.signal, encoding: "utf8" })
+        const binary = encode(data)
+        await fs.writeFile(fsPath, binary, { signal: abortFsWrite.signal })
       }
       catch(e) {
         if (e.name !== "AbortError") {

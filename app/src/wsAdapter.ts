@@ -1,4 +1,4 @@
-import { stringify, parse } from "circ-json"
+import { encode, decode } from "circ-msgpack"
 import { Data, DataBase, instanceTypeSym, DataBaseSubscription, DataSubscription } from "josm";
 import { WebSocket as NodeWebSocket } from "ws";
 import { PrimaryTransmissionAdapter, makeAdapterPair, isAdapterSym } from "./fullyConnectedAdapter"
@@ -13,12 +13,12 @@ export function wsToAdapter(_ws: WebSocket | NodeWebSocket): Promise<PrimaryTran
     function res() {
       _res({
         send(data) {
-          ws.send(stringify(data))
+          ws.send(encode(data))
         },
         onMsg(cb) {
           const listener: any = (ev: MessageEvent) => {
             if (ws.readyState !== WebSocket.OPEN) return
-            cb(parse(ev.data))
+            cb(decode(ev.data))
           }
           ws.addEventListener("message", listener)
           return () => {

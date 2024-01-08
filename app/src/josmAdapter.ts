@@ -51,3 +51,9 @@ export {
   reflectionToSaniTemplate,
   restrictAdapter
 } from "./restrictAdapter"
+
+export {
+  staticIndexDBToAdapter,
+  josmStaticIndexDBReflection,
+  openIndexedDB
+} from "./staticIndexDBReflection"
