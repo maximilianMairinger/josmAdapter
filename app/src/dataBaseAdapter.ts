@@ -66,7 +66,7 @@ export function dataBaseToAdapter(data_dataBase: Data | DataBase): PrimaryStoreA
       },
       send(dataDiff: any) {
         if (typeof dataDiff !== "object" || dataDiff === null) throw new Error("dataDiff must be an object")
-        db(parseEscapedRecursion(db(), dataDiff))
+        db(parseEscapedRecursion(db(), dataDiff, true))
       },
       onMsg(cb: (data: any) => void) {
         const r = db(function subFunc(full, diff) {
@@ -192,7 +192,7 @@ function getParents(db: InternalDataBase<{}>) {
 
 
 
-export function parseEscapedRecursion(rootStore: object, diff: object, mergeIntoDiff = true) {
+export function parseEscapedRecursion(rootStore: object, diff: object, mergeIntoDiff = false) {
   let known = new Set()
 
   const mergeInto = mergeIntoDiff ? diff : rootStore
@@ -203,35 +203,44 @@ export function parseEscapedRecursion(rootStore: object, diff: object, mergeInto
   function rec(diff: any, mergeInto?: object) {
     
     if (typeof diff === "object" && diff !== null) {
-      const mergeIntoIsObj = typeof mergeInto === "object" && mergeInto !== null
-      if (mergeIntoIsObj) {
-        if (known.has(mergeInto)) return mergeInto
-        known.add(mergeInto)
-      }
       
+      
+      const keys = Object.keys(diff)
 
-      for (const key of Object.keys(diff)) {
-        const val = diff[key]
-        if (key === "$ref" && typeof val === "string") {
-          if (val.startsWith("##")) diff[key] = val.slice(1)
-          else if (val.startsWith("#")) {
-            const path = resolvePointer(val)
-            
-            let c = rootStore
-            for (const entry of path) {
-              c = c[entry]
-            }
-            return c
-          }
-        }
-        else {
-          // length of array can be set this way... 
-          if (mergeIntoIsObj && (Object.hasOwn(mergeInto, key) || mergeInto[key] === undefined)) {
-            mergeInto[key] = rec(val, mergeInto[key])
-          }
+      if (keys.length === 1 && keys[0] === "$ref" && typeof diff.$ref === "string") {
+        const val = diff.$ref
+        if (val.startsWith("##")) diff.$ref = val.slice(1)
+        else if (val.startsWith("#")) {
+          const path = resolvePointer(val)
+          
+          let c = rootStore
+          for (const entry of path) c = c[entry]
+          return c
         }
       }
-      return mergeInto
+
+      const mergeIntoIsObj = typeof mergeInto === "object" && mergeInto !== null
+
+      if (mergeIntoIsObj) {
+        if (known.has(diff)) return mergeInto
+        known.add(diff)
+
+
+        for (const key of Object.keys(diff)) {
+          const val = diff[key]
+
+
+          if (!mergeIntoDiff && val === undefined) delete mergeInto[key] 
+          // length of array can be set this way... 
+          else if (Object.hasOwn(mergeInto, key) || mergeInto[key] === undefined) 
+            mergeInto[key] = rec(val, mergeInto[key])
+            
+          
+          
+        }
+        return mergeInto
+      }
+      else return diff
     }
     else return diff
   }
