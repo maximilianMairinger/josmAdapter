@@ -1,7 +1,7 @@
 import { Data, DataBase, instanceTypeSym, DataBaseSubscription, DataSubscription, internalDataBaseBridge, dataBaseParsingId as parsingId } from "josm"
 import { PrimaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import cloneKeys from "circ-clone"
-import { resolvePointer, toPointer } from "./mongoReflection"
+import { toPointer, resolvePointer } from "./lib"
 import { MultiMap } from "more-maps"
 
 
