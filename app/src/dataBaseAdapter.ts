@@ -3,7 +3,7 @@ import { PrimaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import cloneKeys from "circ-clone"
 import { toPointer, resolvePointer } from "./lib"
 import { MultiMap } from "more-maps"
-
+import { parseEscapedRecursion } from "./lib"
 
 
 type UnifiedDataAndBase = {
@@ -192,40 +192,3 @@ function getParents(db: InternalDataBase<{}>) {
 
 
 
-export function parseEscapedRecursion(rootStore: object, diff: object, mergeIntoDiff = true) {
-  let known = new Set()
-
-  const mergeInto = mergeIntoDiff ? diff : rootStore
-  rec(diff, mergeInto)
-  return mergeInto
-
-
-  function rec(diff: any, mergeInto: object = {}) {
-    if (diff instanceof Object) {
-      if (known.has(mergeInto)) return mergeInto
-      known.add(mergeInto)
-
-      for (const key in diff) {
-        const val = diff[key]
-        if (key === "$ref" && typeof val === "string") {
-          if (val.startsWith("##")) diff[key] = val.slice(1)
-          else if (val.startsWith("#")) {
-            const path = resolvePointer(val)
-            
-            let c = rootStore
-            for (const entry of path) {
-              c = c[entry]
-            }
-            return c
-          }
-        }
-        else {
-          const ret = rec(val, mergeInto[key])
-          if (Object.hasOwn(mergeInto, key) || !(key in Object.prototype)) mergeInto[key] = ret
-        }
-      }
-      return mergeInto
-    }
-    else return diff
-  }
-}

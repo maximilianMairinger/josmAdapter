@@ -1,4 +1,4 @@
-import { parseDataDiff } from "./fsReflection";
+import { parseDataDiff } from "./lib";
 import { PrimaryTransmissionAdapter, SecondaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import { makeJosmReflection } from "./josmReflection";
 import { stringify, parse } from "circ-json" // move this to binary

@@ -5,7 +5,7 @@ import path from "path"
 import { promises as fs } from "fs"
 import { stringify, parse } from "circ-json" // move data storage to be binary based
 import { ResablePromise } from "more-proms";
-import { parseEscapedRecursion } from "./dataBaseAdapter";
+import { parseDataDiff } from "./lib";
 import clone, { mergeKeysDeep } from "circ-clone"
 
 
@@ -93,18 +93,7 @@ export async function fsToAdapter(fsPath: string) {
 }
 
 
-export function parseDataDiff(full: any, diff: any) {
-  let data: any
-  if (typeof diff === "object" && diff !== null) { 
-    if (typeof full !== "object" || full === null) data = diff
-    else {
-      data = parseEscapedRecursion(full, diff, false)
-      
-    }
-  }
-  else data = diff
-  return data
-}
+
 
 
 
