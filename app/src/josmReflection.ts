@@ -101,7 +101,7 @@ export function makeJosmReflection<Instance, R extends PrimaryTransmissionAdapte
 
 
 
-
+// use exec queue from more-proms
 export function callInOrder() {
   const queue = [] as {prom: ResablePromise, f: Function}[]
   return function queueFunc(f: Function) {
@@ -123,7 +123,7 @@ export function callInOrder() {
 
 
 
-
+// use sani-against?
 export function crawlCyclicAndCallFunc<D, O>(defaults: D, object: O, oneFunctionCallAtATime = true): DefaultVal<D> | Promise<DefaultVal<D>> {
   const objectStore = new Set()
 

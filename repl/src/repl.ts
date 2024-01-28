@@ -1,5 +1,5 @@
 import { DataBase } from "josm"
-import { josmLocalStorageReflection, josmEventReflection, josmFsReflection, websocketJosmAdapterClient, josmStaticIndexDBReflection, openIndexedDB } from "../../app/src/josmAdapter"
+import { josmLocalStorageReflection, josmEventReflection, websocketJosmAdapterClient, josmStaticIndexDBReflection } from "../../app/src/josmAdapter"
 import wsUrlify from "normalize-ws-url-protocol"
 import clone from "circ-clone"
 import { decode, encode } from "circ-msgpack"
@@ -16,11 +16,18 @@ declare const window: any
 
 (async () => {
 
-  const db = await josmStaticIndexDBReflection({ db: await openIndexedDB("test123")}, { test: 2, deep: { a: 1, b: 2 } })  
+  const p = new Promise<void>((res, rej) => {
+    setTimeout(() => {
+      res()
+    }, 1000)
+  })
 
-
-  
-  window.db = db
+  p.then(() => {
+    return Promise.reject()
+    console.log("then")
+  }, () => {
+    console.log("catch")
+  })
 
   // fs.writeFileSync("lelTest", "")
   // console.log(encode([undefined]))

@@ -26,11 +26,6 @@ export {
 } from "./domScrollReflection"
 
 export {
-  fsToAdapter,
-  josmFsReflection
-} from "./fsReflection"
-
-export {
   localStorageToAdapter,
   josmLocalStorageReflection
 } from "./localStorageReflection"
@@ -53,7 +48,29 @@ export {
 } from "./restrictAdapter"
 
 export {
-  staticIndexDBToAdapter,
-  josmStaticIndexDBReflection,
-  openIndexedDB
-} from "./staticIndexDBReflection"
+  makeIndexedDBClient,
+  indexedDBToUniDB
+} from "./indexedDBToUniDB"
+
+export {
+  josmStaticIndexDBReflection
+} from "./staticIndexedDBReflection"
+
+
+export {
+  makeMongoClient,
+  mongoDBToUniDB
+} from "./mongoToUniDB"
+
+export {
+  josmStaticMongoDBReflection
+} from "./staticMongoDBReflection"
+
+
+export {
+  fsToSimpleUniDB
+} from "./fsToSimpleUniDB"
+
+export {
+  josmStaticFsReflection
+} from "./staticFsReflection"

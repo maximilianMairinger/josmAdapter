@@ -1,4 +1,4 @@
-import { parseDataDiff } from "./fsReflection";
+import { parseDataDiff } from "./lib";
 import { PrimaryTransmissionAdapter, SecondaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import { makeJosmReflection } from "./josmReflection";
 // circ-json doesnt support undefined!!!! I think this is ok though, as this is only used as reflection.

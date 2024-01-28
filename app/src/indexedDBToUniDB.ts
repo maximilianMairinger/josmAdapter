@@ -1,60 +1,56 @@
 import idb, { openDB } from "idb";
 import { execQueue, CancelAblePromise } from "more-proms"
-import { parseDataDiff } from "./util";
+import { UniDB, parseDataDiff } from "./lib";
+import { defaultTransactionOptions } from "./lib"
+import { memoize } from "key-index";
 
-
-export const defaultTransactionOptions = {access: "readonly", skipAble: false} as {access?: "readwrite" | "readonly", skipAble?: boolean}
-export class IDBPCollection {
-  public constructor(public db: idb.IDBPDatabase, public collectionName: string) { }
-}
 
 type ObjStoreName = string
-const defaultStoreName = "defaultStoreName"
-export async function openIndexedDBCollection(dbName: string, objStoreName: ObjStoreName = defaultStoreName) {
-  return new IDBPCollection(await openDB(dbName, 4, {
+export async function makeIndexedDBClient({dbName, objStoreName}: {dbName: string, objStoreName: ObjStoreName}) {
+  return {db: await openDB(dbName, 4, {
     upgrade(db, oldVersion, newVersion, transaction, event) {
       try {
         db.createObjectStore(objStoreName, { autoIncrement: true })
       }
       catch(e) {}
     }
-  }), objStoreName)
+  }), collectionName: objStoreName}
 };
 
 
-export type UniDB<ID = unknown> = {
-  findOne(id: ID): Promise<unknown> 
-  insertOne(doc: object): Promise<ID>
-  updateOne(id: ID, diff: { [key: string]: undefined | unknown }): Promise<void>
-  transaction<T, R extends Promise<T> | CancelAblePromise<T, string, Promise<void> | undefined>>(f: () => R, options?: typeof defaultTransactionOptions): R
-  rootId: ID
-}
-
-
+export type IDBPCollection = { db: idb.IDBPDatabase, collectionName: string }
 type ID = number
 export function indexedDBToUniDB({db, collectionName}: IDBPCollection): UniDB<ID> {
   const rootId = 0
 
   let collectionInTransaction: idb.IDBPObjectStore<unknown, string[], string, "readwrite" | "readonly">
 
-  function findOne(id: ID) {
+  async function findOne(id: ID = rootId) {
+    isInTransactionCheck()
     return collectionInTransaction.get(id)
   }
 
-  function insertOne(doc: object) {
+  async function insertOne(doc: object) {
+    isInTransactionCheck()
     return collectionInTransaction.add(doc) as Promise<ID>
   }
 
-  async function updateOne(id: ID, diff: { [key: string]: undefined | unknown }) {
-    collectionInTransaction.put(parseDataDiff(await findOne(id), diff), id)
+  async function updateOne(diff: { [key: string]: undefined | unknown }, id: ID = rootId) {
+    isInTransactionCheck()
+    await collectionInTransaction.put(parseDataDiff(await findOne(id), diff), id)
   }
 
+  let currentlyInTransaction = false
+  function isInTransactionCheck() {
+    if (!currentlyInTransaction) throw new Error("not in transaction")
+  }
 
   const runInQ = execQueue()
-  // important this promise may never resolve, when it is canceled or skipped
+  // important this promise may never resolve, when it is canceled or skipped. This is only relevant when the passed in promise from f is a CancelAblePromise. In this case the provider (f) should listen to on cancel events.
   function transaction(f: () => Promise<void> | CancelAblePromise<void, string, Promise<void> | undefined>, options?: typeof defaultTransactionOptions) {
     options = {...defaultTransactionOptions, ...options}
     return runInQ(() => {
+      currentlyInTransaction = true
       const transaction = db.transaction([collectionName], options.access)
       collectionInTransaction = transaction.objectStore(collectionName)
       
@@ -63,22 +59,28 @@ export function indexedDBToUniDB({db, collectionName}: IDBPCollection): UniDB<ID
         fRes = f()
       }
       catch(e) {
-        return Promise.reject(e)
-      }
+        return CancelAblePromise.reject(e)
+      } 
 
       
 
 
-
-      return (fRes as CancelAblePromise).then(() => {
-        return transaction.done
-      }, undefined, "cancel" in fRes ? async (reason) => {
-        await (fRes as CancelAblePromise<any, any, any>).cancel(reason)
+      const abortTransaction = memoize(() => {
+        currentlyInTransaction = false
         collectionInTransaction.transaction.abort()
+      })
+      return (fRes as CancelAblePromise).then(async () => {
+        await transaction.done
+        currentlyInTransaction = false
+      }, (e) => {
+        abortTransaction()
+      }, "cancel" in fRes ? async (reason) => {
+        abortTransaction()
+        await (fRes as CancelAblePromise<any, any, any>).cancel(reason)
       } : undefined)
       
       
-    }, {skipAble: options.skipAble})
+    }, {skipAble: options.skipAble}, options.skipPrevIfPossible)
   }
 
 

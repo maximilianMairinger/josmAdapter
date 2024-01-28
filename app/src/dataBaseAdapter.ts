@@ -1,7 +1,7 @@
 import { Data, DataBase, instanceTypeSym, DataBaseSubscription, DataSubscription, internalDataBaseBridge, dataBaseParsingId as parsingId } from "josm"
 import { PrimaryStoreAdapter, isAdapterSym } from "./fullyConnectedAdapter"
 import cloneKeys from "circ-clone"
-import { resolvePointer, toPointer } from "./mongoReflection"
+import { toPointer, parseEscapedRecursion } from "./lib"
 import { MultiMap } from "more-maps"
 
 
@@ -191,57 +191,3 @@ function getParents(db: InternalDataBase<{}>) {
 }
 
 
-
-export function parseEscapedRecursion(rootStore: object, diff: object, mergeIntoDiff = false) {
-  let known = new Set()
-
-  const mergeInto = mergeIntoDiff ? diff : rootStore
-  rec(diff, mergeInto)
-  return mergeInto
-
-
-  function rec(diff: any, mergeInto?: object) {
-    
-    if (typeof diff === "object" && diff !== null) {
-      
-      
-      const keys = Object.keys(diff)
-
-      if (keys.length === 1 && keys[0] === "$ref" && typeof diff.$ref === "string") {
-        const val = diff.$ref
-        if (val.startsWith("##")) diff.$ref = val.slice(1)
-        else if (val.startsWith("#")) {
-          const path = resolvePointer(val)
-          
-          let c = rootStore
-          for (const entry of path) c = c[entry]
-          return c
-        }
-      }
-
-      const mergeIntoIsObj = typeof mergeInto === "object" && mergeInto !== null
-
-      if (mergeIntoIsObj) {
-        if (known.has(diff)) return mergeInto
-        known.add(diff)
-
-
-        for (const key of Object.keys(diff)) {
-          const val = diff[key]
-
-
-          if (!mergeIntoDiff && val === undefined) delete mergeInto[key] 
-          // length of array can be set this way... 
-          else if (Object.hasOwn(mergeInto, key) || mergeInto[key] === undefined) 
-            mergeInto[key] = rec(val, mergeInto[key])
-            
-          
-          
-        }
-        return mergeInto
-      }
-      else return diff
-    }
-    else return diff
-  }
-}

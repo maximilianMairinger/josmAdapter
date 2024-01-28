@@ -1,48 +1,58 @@
 import { Collection, MongoClient, Db, ObjectId, ClientSession } from "mongodb";
-import { UniDB, defaultTransactionOptions } from "./indexedDBToUniDB";
+import { UniDB, defaultTransactionOptions } from "./lib";
 import { execQueue, CancelAblePromise } from "more-proms"
+import { memoize } from "key-index";
 
 
 
-export async function mongoDBToUniDB<ID extends ObjectId>({client, db }: {client: MongoClient, db: Collection }): Promise<UniDB & {closeSession: () => Promise<void>}> {
+export async function makeMongoClient({dbName, collectionName, mongoURI = "mongodb://localhost:27017"}: {dbName: string, collectionName: string, mongoURI?: string}) {
+  const client = await MongoClient.connect(mongoURI)
+  const db = client.db(dbName)
+  const collection = db.collection(collectionName)
+  return { client, collection }
+}
+
+type ID = ObjectId
+export async function mongoDBToUniDB({ client, collection }: {client: MongoClient, collection: Collection }): Promise<UniDB & {closeSession: () => Promise<void>}> {
+  const db = collection
 
   const doc = await db.findOne({})
-  let rootId: ObjectId
+  let rootId: ID
   if (!doc) rootId = doc !== null ? doc._id : await insertOne({})
 
   const session = client.startSession()
 
-  function findOne(_id: ID) {
+  async function findOne(_id: ID = rootId) {
+    isInTransactionCheck()
     return db.findOne({ _id }, {projection: { _id: false }})
   }
 
-  function insertOne(doc: object) {
+  async function insertOne(doc: object) {
+    isInTransactionCheck()
     if (doc["_id"] !== undefined) throw new Error("cannot insert _id")
     return db.insertOne(doc).then((r) => r.insertedId) as Promise<ID>
   }
 
-  async function updateOne(_id: ID, diff: {toBeAdded?: object, toBeRemoved?: string[] | {[key: string]: undefined | null}}) {
-    let toBeRm: any
-    if (diff.toBeRemoved instanceof Array) {
-      toBeRm = Object.create(null)
-      for (const iterator of diff.toBeRemoved) {
-        // if (iterator === "_id") throw new Error("cannot remove _id")
-        // the above check happens at mongodb level
-        toBeRm[iterator] = null
-      }
+  async function updateOne(diff: {[key: string]: undefined | unknown}, _id: ID = rootId) {
+    isInTransactionCheck()
+    const toBeAdded = Object.create(null)
+    const toBeRm = Object.create(null)
+    for (const key in diff) {
+      if (diff[key] === undefined) toBeRm[key] = undefined
+      else toBeAdded[key] = diff[key]
     }
-    else toBeRm = diff.toBeRemoved
 
-    let action = {}
-    if (diff.toBeAdded !== undefined) action["$set"] = diff.toBeAdded
-    if (toBeRm !== undefined) action["$unset"] = toBeRm
-
-    await db.updateOne({ _id }, action)
+    await db.updateOne({ _id }, { $set: toBeAdded, $unset: toBeRm })
   }
 
 
   function closeSession() {
     return session.endSession()
+  }
+
+  let currentlyInTransaction = false
+  function isInTransactionCheck() {
+    if (!currentlyInTransaction) throw new Error("not in transaction")
   }
 
 
@@ -58,6 +68,7 @@ export async function mongoDBToUniDB<ID extends ObjectId>({client, db }: {client
     if (options.access === "readwrite") conf.writeConcern = { w: 1 }
 
     return runInQ(() => {
+      currentlyInTransaction = true
       session.startTransaction(conf)
       
       let fRes: Promise<any> | CancelAblePromise
@@ -66,16 +77,28 @@ export async function mongoDBToUniDB<ID extends ObjectId>({client, db }: {client
         fRes = f()
       }
       catch(e) {
-        return (async () => {
+        let abortProm: Promise<void>
+        return new CancelAblePromise(async (res, rej) => {
+          abortProm = session.abortTransaction()
+          await abortProm
+          rej(e)
+        }, async () => {
           await session.abortTransaction()
-          throw e
-        })()
+        })
       }
 
-
-      return (fRes as CancelAblePromise).then(() => commitWithRetry(session), () => session.abortTransaction(), "cancel" in fRes ? async (reason) => {
-        await (fRes as CancelAblePromise<any, any, any>).cancel(reason)
+      const abortTransaction = memoize(async () => {
+        currentlyInTransaction = false
         await session.abortTransaction()
+      })
+      return (fRes as CancelAblePromise).then(async () => {
+        await commitWithRetry(session)
+        currentlyInTransaction = false
+      }, async () => {
+        await abortTransaction()
+      }, "cancel" in fRes ? async (reason) => {
+        await abortTransaction()
+        await (fRes as CancelAblePromise<any, any, any>).cancel(reason)
       } : undefined)
     }, {skipAble: options.skipAble}, true)
   }
@@ -109,3 +132,5 @@ function commitWithRetry(session: ClientSession) {
     }
   }
 }
+
+
