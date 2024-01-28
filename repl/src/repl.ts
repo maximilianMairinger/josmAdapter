@@ -4,6 +4,7 @@ import wsUrlify from "normalize-ws-url-protocol"
 import clone from "circ-clone"
 import { decode, encode } from "circ-msgpack"
 import fs from "fs"
+import delay from "tiny-delay"
 
 declare const window: any
 
@@ -18,12 +19,16 @@ declare const window: any
 
   const p = new Promise<void>((res, rej) => {
     setTimeout(() => {
-      res()
+      console.log("1")
+      res(delay(1000).then(() => {
+        console.log("2")
+
+      }))
     }, 1000)
   })
 
   p.then(() => {
-    return Promise.reject()
+    // return Promise.reject()
     console.log("then")
   }, () => {
     console.log("catch")

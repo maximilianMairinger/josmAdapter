@@ -17,6 +17,7 @@ export async function fsToSimpleUniDB(filePath: FilePath): Promise<SimpleUniDB> 
   } 
   else {
     await fs.mkdir(path.dirname(filePath), { recursive: true })
+    await fs.writeFile(filePath, encode(undefined))
   }
 
 
@@ -35,7 +36,10 @@ export async function fsToSimpleUniDB(filePath: FilePath): Promise<SimpleUniDB> 
   }
 
 
+  let writeHappened = false
+  // todo this should return cancelAblePromise, so that transaction can be canceled
   async function updateOne(diff: { [key: string]: undefined | unknown }) {
+    writeHappened = true
     if (!currentlyInTransaction) throw new Error("not in transaction")
     tmpData = parseDataDiff(await findOne(), diff)
   }
@@ -65,22 +69,24 @@ export async function fsToSimpleUniDB(filePath: FilePath): Promise<SimpleUniDB> 
         tmpData = initTmpData
         currentlyInTransaction = false
       })
-      const retProm = (fRes as CancelAblePromise).then(async () => {
-        try {
-          await fs.writeFile(filePath, encode(tmpData), { signal: abortController.signal })
-          initTmpData = tmpData = undefined
-          currentlyInTransaction = tmpDataSet = false
-        }
-        catch(e) {
-          if (e.name !== "AbortError") {
-            abort()
-            throw e
+      const retProm = (fRes as CancelAblePromise).then(async (res) => {
+        if (writeHappened) {
+          try {
+            await fs.writeFile(filePath, encode(await tmpData), { signal: abortController.signal })
+            initTmpData = tmpData = undefined
+            currentlyInTransaction = tmpDataSet = writeHappened = false
+          }
+          catch(e) {
+            if (e.name !== "AbortError") {
+              abort()
+              throw e
+            }
           }
         }
-        
-        
-      }, () => {
+        return res
+      }, (reason) => {
         abort()
+        throw reason
       }, "cancel" in fRes ? async (reason) => {
         abortController.abort(reason)
         abort()

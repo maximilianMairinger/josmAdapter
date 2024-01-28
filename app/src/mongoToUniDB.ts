@@ -91,9 +91,10 @@ export async function mongoDBToUniDB({ client, collection }: {client: MongoClien
         currentlyInTransaction = false
         await session.abortTransaction()
       })
-      return (fRes as CancelAblePromise).then(async () => {
+      return (fRes as CancelAblePromise).then(async (res) => {
         await commitWithRetry(session)
         currentlyInTransaction = false
+        return res
       }, async () => {
         await abortTransaction()
       }, "cancel" in fRes ? async (reason) => {

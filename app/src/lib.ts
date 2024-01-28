@@ -89,16 +89,16 @@ export const defaultTransactionOptions = {access: "readonly", skipAble: false, s
 
 
 export type UniDB<ID = unknown> = {
-  findOne(id?: ID): Promise<unknown> 
-  insertOne(doc: object): Promise<ID>
-  updateOne(diff: { [key: string]: undefined | unknown }, id?: ID): Promise<void>
+  findOne(id?: ID): Promise<unknown> | CancelAblePromise
+  insertOne(doc: object): Promise<ID> | CancelAblePromise
+  updateOne(diff: { [key: string]: undefined | unknown }, id?: ID): Promise<void> | CancelAblePromise
   transaction<T, R extends Promise<T> | CancelAblePromise<T, string, Promise<void> | undefined>>(f: () => R, options?: typeof defaultTransactionOptions): R
   rootId: ID
 }
 
 export type SimpleUniDB = {
-  findOne(id?: never): Promise<unknown> 
-  // insertOne(doc: object): Promise<never>
-  updateOne(diff: { [key: string]: undefined | unknown }, id?: never): Promise<void>
+  findOne(id?: never): Promise<unknown> | CancelAblePromise
+  // insertOne(doc: object): Promise<never> | CancelAblePromise
+  updateOne(diff: { [key: string]: undefined | unknown }, id?: never): Promise<void> | CancelAblePromise
   transaction<T, R extends Promise<T> | CancelAblePromise<T, string, Promise<void> | undefined>>(f: () => R, options?: typeof defaultTransactionOptions): R
 }

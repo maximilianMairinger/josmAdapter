@@ -69,9 +69,10 @@ export function indexedDBToUniDB({db, collectionName}: IDBPCollection): UniDB<ID
         currentlyInTransaction = false
         collectionInTransaction.transaction.abort()
       })
-      return (fRes as CancelAblePromise).then(async () => {
+      return (fRes as CancelAblePromise).then(async (res) => {
         await transaction.done
         currentlyInTransaction = false
+        return res
       }, (e) => {
         abortTransaction()
       }, "cancel" in fRes ? async (reason) => {
