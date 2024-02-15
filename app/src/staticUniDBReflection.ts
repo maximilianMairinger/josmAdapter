@@ -1,10 +1,12 @@
 import { SimpleUniDB, parseDataDiff } from "./lib";
 import { isAdapterSym } from "./fullyConnectedAdapter"
-import clone, { mergeKeysDeep } from "circ-clone"
+import clone, { cloneKeys, mergeKeysDeep } from "circ-clone"
 import { makeJosmReflection } from "./josmReflection";
 import { CancelAblePromise } from "more-proms";
+import { memoize } from "key-index";
 
 
+let sendIndex = -1
 
 export async function simpleUniDBToAdapter(db: SimpleUniDB) {
 
@@ -21,33 +23,36 @@ export async function simpleUniDBToAdapter(db: SimpleUniDB) {
       )
     },
     async send(_dataDiff: any) {
+      sendIndex++
+      const mySendIndex = sendIndex
+      console.log("sendIndex", sendIndex, cloneKeys(_dataDiff))
       const dataDiff = clone(_dataDiff)
 
-      function onCancel() {
+      const onCancel = memoize(() => {
+        console.log("sendCancel", mySendIndex)
         isTempDiffStorageSet = true
         tempDiffStorage = mergeKeysDeep(tempDiffStorage, dataDiff)
-      }
+      });
 
-      db.transaction(() => {
+      (db.transaction(() => {
+        console.log("sendTransaction start", mySendIndex)
         const diff = mergeKeysDeep(tempDiffStorage, dataDiff)
         isTempDiffStorageSet = false
         tempDiffStorage = undefined
         // This may return a cancelAble Promise.
-        const prom = db.updateOne(diff as any)
-        return !("cancel" in (prom as CancelAblePromise)) ? prom : (prom as CancelAblePromise).then(undefined, undefined, async (reason) => {
-          const res = await (prom as CancelAblePromise<any, any, any>).cancel(reason)
-          onCancel()
-          return res
-        })
+        return db.updateOne(diff as any)
       }, { 
-        skipAble: onCancel, 
+        skipAble: () => {console.log("nextSendCancelIsActuallyASkip");return onCancel()}, 
         access: "readwrite", 
         skipPrevIfPossible: true
+      }) as CancelAblePromise).then(undefined, undefined, async (reason) => {
+        onCancel()
       })
     },
     [isAdapterSym]: true
   } as const
 }
+
 
 
 

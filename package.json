@@ -86,7 +86,7 @@
     "key-index": "^1.7.1",
     "mkdirp": "^3.0.1",
     "more-maps": "^2.1.0",
-    "more-proms": "^1.9.2",
+    "more-proms": "^1.9.5",
     "req-package-json": "^2.1.4",
     "sanitize-against": "^1.5.4"
   }

@@ -20,18 +20,15 @@ declare const window: any
   const p = new Promise<void>((res, rej) => {
     setTimeout(() => {
       console.log("1")
-      res(delay(1000).then(() => {
-        console.log("2")
-
-      }))
+      rej()
     }, 1000)
   })
 
   p.then(() => {
     // return Promise.reject()
     console.log("then")
-  }, () => {
-    console.log("catch")
+  }).finally(() => {
+    console.log("finally")
   })
 
   // fs.writeFileSync("lelTest", "")

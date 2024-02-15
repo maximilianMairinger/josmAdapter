@@ -4,7 +4,7 @@ import { defaultTransactionOptions } from "./lib";
 import { promises as fs } from "fs"
 import { encode, decode } from "circ-msgpack"
 import path from "path"
-import { incUIDScope, isBigintSupported, memoize } from "key-index"
+import { memoize } from "key-index"
 import cloneKeys from "circ-clone";
 
 
@@ -22,26 +22,50 @@ export async function fsToSimpleUniDB(filePath: FilePath): Promise<SimpleUniDB> 
 
 
   let tmpDataSet = false
-  let tmpData: Promise<unknown>
-  let initTmpData: Promise<unknown>
+  let tmpData: CancelAblePromise<any>
+  let initTmpData: CancelAblePromise<any>
+
+
+  
 
   function findOne() {
-    if (!currentlyInTransaction) return Promise.reject(new Error("not in transaction"))
+    if (!currentlyInTransaction) return CancelAblePromise.reject(new Error("not in transaction")) as CancelAblePromise<any>
     if (!tmpDataSet) {
-      initTmpData = (async () => decode(await fs.readFile(filePath)))()
-      tmpData = initTmpData.then((initTmpData) => cloneKeys(initTmpData))
-      tmpDataSet = true
+      const abortController = new AbortController();
+      initTmpData = new CancelAblePromise<any>(async (res, rej) => {
+        let raw: any
+        try {
+          raw = await fs.readFile(filePath, { signal: abortController.signal })
+        }
+        catch(e) {
+          if (e.name !== "AbortError") {
+            rej(e)
+          }
+          else return
+        }
+        const obj = decode(raw)
+        tmpDataSet = true
+
+        res(obj)
+      }, function cancel(reason) {
+        abortController.abort(reason)
+      }) as any
+      tmpData = initTmpData.then((initTmpData) => cloneKeys(initTmpData), undefined, true)
+      return tmpData
     }
-    return tmpData
+    else {
+      // we assume that the user of findOne awaits the last fineOne call before starting this one.
+      return tmpData
+    }
   }
 
 
   let writeHappened = false
-  // todo this should return cancelAblePromise, so that transaction can be canceled
-  async function updateOne(diff: { [key: string]: undefined | unknown }) {
+  function updateOne(diff: { [key: string]: undefined | unknown }) {
+    if (!currentlyInTransaction) return CancelAblePromise.reject(new Error("not in transaction")) as CancelAblePromise<any>
     writeHappened = true
-    if (!currentlyInTransaction) throw new Error("not in transaction")
-    tmpData = parseDataDiff(await findOne(), diff)
+    tmpData = findOne().then(tmpData => parseDataDiff(tmpData, diff), undefined, true)
+    return tmpData
   }
 
   let currentlyInTransaction = false

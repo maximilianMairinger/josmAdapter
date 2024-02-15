@@ -5,7 +5,8 @@ import {
   restrictAdapter, 
   reflectionToSaniTemplate, 
   dataBaseToAdapter,
-  josmStaticFsReflection
+  josmStaticFsReflection,
+  fsToSimpleUniDB
 } from "./../../app/src/josmAdapter"
 import { DataBase } from "josm"
 import delay from "tiny-delay"
@@ -13,6 +14,9 @@ import delay from "tiny-delay"
 import { josmMongoReflection } from "../../app/src/mongoReflection"
 import sani, { AND } from "sanitize-against"
 import cloneKeys from "circ-clone"
+import { encode, decode } from "circ-msgpack"
+import { promises as fs } from "fs"
+import { simpleUniDBToAdapter } from "../../app/src/staticUniDBReflection"
 
 
 
@@ -20,25 +24,45 @@ import cloneKeys from "circ-clone"
 setupServer("test").then(async ({app, db: mongo}) => {
 
 
-  console.log("start")
+  const adapter = await simpleUniDBToAdapter(await fsToSimpleUniDB("test123"))
 
-  const db = await josmStaticFsReflection("test123", {
-    lel: 2,
-    lol: "lol"
+  adapter.msg().then((msg) => {
+    console.log("msg1", msg)
   })
 
-  console.log(cloneKeys(db()))
-
-  // db({lol: "WHOO2"})
+  adapter.send({ q: 1, circ2: { $ref: "#"}})
 
 
+  adapter.msg().then((msg) => {
+    console.log("msg2", msg)
+  })
+  
+
+
+  adapter.send({ q: 2})
+
+  adapter.msg().then((msg) => {
+    console.log("msg3", msg)
+  })
+
+
+  // console.log("")
+  // console.log("")
+  // console.log("start")
+
+  // const db = await josmStaticFsReflection("test123", {
+  //   lel: 2,
+  //   lol: "lol"
+  // })
 
 
 
+  // db.lel.set(1)
+  // db.lel.set(2)
 
-  console.log(cloneKeys(db()))
+  // console.log(cloneKeys(db()))
 
-  console.log("end")
+  // console.log("end")
 
 
 

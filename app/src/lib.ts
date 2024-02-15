@@ -99,6 +99,6 @@ export type UniDB<ID = unknown> = {
 export type SimpleUniDB = {
   findOne(id?: never): Promise<unknown> | CancelAblePromise
   // insertOne(doc: object): Promise<never> | CancelAblePromise
-  updateOne(diff: { [key: string]: undefined | unknown }, id?: never): Promise<void> | CancelAblePromise
-  transaction<T, R extends Promise<T> | CancelAblePromise<T, string, Promise<void> | undefined>>(f: () => R, options?: typeof defaultTransactionOptions): R
+  updateOne(diff: { [key: string]: undefined | unknown }, id?: never): Promise<void> | CancelAblePromise<void>
+  transaction<T extends unknown, R extends Promise<T> | CancelAblePromise<T, string, Promise<void> | undefined>>(f: () => R, options?: typeof defaultTransactionOptions): R
 }
