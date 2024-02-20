@@ -1,27 +1,37 @@
-import { devices } from '@playwright/test';
+import { devices, defineConfig } from '@playwright/test';
+import path from "path"
 
 const port = process.env.PORT || 4500
+const testDir = './test2'
 
-export default {
+export default defineConfig({
   projects: [
     {
       name: 'Chromium',
       use: {...devices['Desktop Chrome']},
+      testMatch: path.join(testDir, "browser.spec.ts")
     },
-    // {
-    //   name: 'Firefox',
-    //   use: {...devices['Desktop Firefox']},
-    // },
-    // {
-    //   name: 'WebKit',
-    //   use: {...devices['Desktop Safari']},
-    // },
+    {
+      name: 'Firefox',
+      use: {...devices['Desktop Firefox']},
+      testMatch: path.join(testDir, "browser.spec.ts")
+    },
+    {
+      name: 'WebKit',
+      use: {...devices['Desktop Safari']},
+      testMatch: path.join(testDir, "browser.spec.ts")
+    },
+
+    {
+      name: 'Node',
+      testMatch: path.join(testDir, "node.spec.ts")
+    },
   ],
   // Global configuration options
   use: {
     headless: true,
-    testDir: './test2',
     baseURL: `http://127.0.0.1:${port}`,
+    testDir: testDir,
   },
   webServer: {
     command: `PORT=${port} node dummyServer.js`,
@@ -30,5 +40,5 @@ export default {
     stdout: 'pipe',
     stderr: 'pipe',
   },
-}
+})
 

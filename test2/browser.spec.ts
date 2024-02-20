@@ -1,6 +1,6 @@
 // import clone from 'circ-clone';
-import { test, injectImports } from './testSetup';
-declare const { expect }: typeof import('./testSetup')
+import { test, injectImports } from './browserTestSetup';
+declare const { expect }: typeof import('./browserTestSetup')
 
 // dont import anything used inside a test, as it will be run in the browser. Declare it below. 
 
