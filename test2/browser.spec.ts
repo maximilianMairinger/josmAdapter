@@ -61,6 +61,17 @@ test.describe("Reflection", () => {
       expect(val2.get()).toBe(2)
     })
 
+    test("refresh retention", () => {
+      const val = josmLocalStorageReflection("testKey", 2);
+
+      expect(val.get()).toBe(2)
+      val.set(3)
+      expect(val.get()).toBe(3)
+    }, () => {
+      const val2 = josmLocalStorageReflection("testKey", 2);
+      expect(val2.get()).toBe(3)
+    })
+
     test("dependent on key", () => {
       const val = josmLocalStorageReflection("testKey", 2);
 
