@@ -9,7 +9,7 @@ declare const { josmLocalStorageReflection }: typeof import("../app/src/josmAdap
 injectImports.push({import: ["josmLocalStorageReflection"], from: "./app/src/localStorageReflection"})
 
 test.describe("Reflection", () => {
-  test.describe("localStorage", () => {
+  test.describe("static localStorage", () => {
     test.describe("meta", () => {
       test('works', () => {
         localStorage.setItem('testKey', 'testValue');    
@@ -99,7 +99,7 @@ test.describe("Reflection", () => {
     })
 
 
-    test.describe(() => {
+    test.describe("object", () => {
       test("object one prop", () => {
         const val = josmLocalStorageReflection("testKey", {a: 2});
 

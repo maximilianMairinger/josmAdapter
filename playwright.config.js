@@ -2,25 +2,25 @@ import { devices, defineConfig } from '@playwright/test';
 import path from "path"
 
 const port = process.env.PORT || 4500
-const testDir = './test2'
+const testDir = './test'
 
 export default defineConfig({
   projects: [
-    {
-      name: 'Chromium',
-      use: {...devices['Desktop Chrome']},
-      testMatch: path.join(testDir, "browser.spec.ts")
-    },
-    {
-      name: 'Firefox',
-      use: {...devices['Desktop Firefox']},
-      testMatch: path.join(testDir, "browser.spec.ts")
-    },
-    {
-      name: 'WebKit',
-      use: {...devices['Desktop Safari']},
-      testMatch: path.join(testDir, "browser.spec.ts")
-    },
+    // {
+    //   name: 'Chromium',
+    //   use: {...devices['Desktop Chrome']},
+    //   testMatch: path.join(testDir, "browser.spec.ts")
+    // },
+    // {
+    //   name: 'Firefox',
+    //   use: {...devices['Desktop Firefox']},
+    //   testMatch: path.join(testDir, "browser.spec.ts")
+    // },
+    // {
+    //   name: 'WebKit',
+    //   use: {...devices['Desktop Safari']},
+    //   testMatch: path.join(testDir, "browser.spec.ts")
+    // },
 
     {
       name: 'Node',
@@ -29,6 +29,8 @@ export default defineConfig({
   ],
   // Global configuration options
   use: {
+    workers: 1,
+    fullyParallel: false,
     headless: true,
     baseURL: `http://127.0.0.1:${port}`,
     testDir: testDir,

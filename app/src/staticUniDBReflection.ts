@@ -25,17 +25,17 @@ export async function simpleUniDBToAdapter(db: SimpleUniDB) {
     async send(_dataDiff: any) {
       sendIndex++
       const mySendIndex = sendIndex
-      console.log("sendIndex", sendIndex, cloneKeys(_dataDiff))
+      // console.log("sendIndex", sendIndex, cloneKeys(_dataDiff))
       const dataDiff = clone(_dataDiff)
 
       const onCancel = memoize(() => {
-        console.log("sendCancel", mySendIndex)
+        // console.log("sendCancel", mySendIndex)
         isTempDiffStorageSet = true
         tempDiffStorage = mergeKeysDeep(tempDiffStorage, dataDiff)
       });
 
       (db.transaction(() => {
-        console.log("sendTransaction start", mySendIndex)
+        // console.log("sendTransaction start", mySendIndex)
         const diff = mergeKeysDeep(tempDiffStorage, dataDiff)
         isTempDiffStorageSet = false
         tempDiffStorage = undefined

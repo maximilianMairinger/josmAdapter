@@ -1,5 +1,5 @@
 import { DataBase } from "josm"
-import { josmLocalStorageReflection, josmEventReflection, websocketJosmAdapterClient, josmStaticIndexDBReflection } from "../../app/src/josmAdapter"
+import { josmLocalStorageReflection, josmEventReflection, websocketJosmAdapterClient, josmStaticIndexDBReflection, josmStaticFsReflection } from "../../app/src/josmAdapter"
 import wsUrlify from "normalize-ws-url-protocol"
 import clone from "circ-clone"
 import { decode, encode } from "circ-msgpack"
@@ -19,25 +19,11 @@ declare const window: any
 
 (async () => {
 
-  const srcOb = {a: {b: 2}, c: "cc"};
-  (srcOb as any).a.d = srcOb
-  const val = josmLocalStorageReflection("testKey", srcOb);
+  await josmStaticFsReflection("lel123", 2);
 
-  console.log(val())
-  val.a.b.set(3)
-  const resOb1 = {a: {b: 3, d: undefined}, c: "cc"}
-  resOb1.a.d = resOb1
-  console.log(val());
+  await delay(100)
 
-
-  (val as any).a.d.a.b.set(4)
-  
-  const resOb2 = {a: {b: 4, d: undefined}, c: "cc"}
-  resOb2.a.d = resOb2;
-  console.log(val())
-
-  const val2 = josmLocalStorageReflection("testKey", srcOb);
-  console.log(val2())
+  await josmStaticFsReflection("lel123", {a: 2});
 
 
 

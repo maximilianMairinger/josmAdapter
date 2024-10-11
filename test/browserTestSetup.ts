@@ -4,8 +4,11 @@ import esbuild from "esbuild"
 import crypto from "crypto"
 import path from "path"
 import slugify from "slugify"
+import { expect } from "./testSeup"
+export { expect } from "./testSeup"
 
-declare const { cloneKeys: clone }: typeof import("circ-clone")
+const testDir = "test"
+
 
 let index = 0
 function uuid(name: string = "") {
@@ -176,7 +179,7 @@ export function test(name: string, ...functions: (() => (void | Promise<void>))[
       // handle imports
       const userFuncStr = toString(f)
       const myUUID = uuid(slugify(name))
-      const dir = path.resolve(`test2/tmp/${myUUID}-${i}.js`)
+      const dir = path.resolve(path.join(testDir, `tmp/${myUUID}-${i}.js`))
       await fs.mkdir(path.dirname(dir), {recursive: true})
       const importsStrs = injectImports.map(({import: imp, from}) => `import { ${imp.join(", ")} } from "${!from.startsWith("./") ? from : path.join("../../", from)}"`)
 
@@ -227,7 +230,7 @@ export function test(name: string, ...functions: (() => (void | Promise<void>))[
     for (const { type, prop } of allCalls) {
       if (type === "expect") {
         const { method, not, testValue, expectedValue, count } = prop
-        let p = customExpect(!testValue.isFunc ? testValue.value : testValue.thrown ? () => {throw testValue.value} : () => testValue.value) as any
+        let p = expect(!testValue.isFunc ? testValue.value : testValue.thrown ? () => {throw testValue.value} : () => testValue.value) as any
         if (not) p = p.not
         p = p[method]
         if (!expectedValue.specialProp) doExpectCall(expectedValue.value)
@@ -260,34 +263,3 @@ test.describe = playwright.test.describe;
 
 
 
-import { expect as baseExpect } from '@playwright/test';
-
-import { circularDeepEqual } from "fast-equals"
-import cl from "circ-clone"
-
-
-
-
-function eq(exp, ...got) {
-  let pass = false
-  for (const g of got) {
-    if (circularDeepEqual(cl(exp), cl(g))) {
-      pass = true
-      break
-    }
-  }
-
-
-  return {
-    pass,
-    name: "deep circ equal, respecting keys only (eq)",
-    message: () => `Expected ${this.utils.printReceived(cl(exp))} to be depply equal to ${got.map((got) => this.utils.printExpected(cl(got))).join(" or ")}`,
-  }
-}
-
-
-const customExpect = baseExpect.extend({
-  eq
-})
-
-export const expect = customExpect;

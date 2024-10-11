@@ -135,7 +135,7 @@ export function crawlCyclicAndCallFunc<D, O>(defaults: D, object: O, oneFunction
   const proms = []
 
   function crawlCyclicAndCallFuncRec(defaults: unknown, object: unknown, path: string[]) {
-    if (typeof defaults !== typeof object && !(defaults instanceof Promise) && !(defaults instanceof Function) && (defaults !== undefined) && (object !== undefined)) throw new Error(`Type mismatch at "${path.join(".")}": ${typeof defaults} (default) !== ${typeof object} (stored)`)
+    if (typeof defaults !== typeof object && !(defaults instanceof Promise) && !(defaults instanceof Function) && (defaults !== undefined) && (object !== undefined)) throw new Error(`Type mismatch${path.length !== 0 ? ` at "${path.join(".")}"` : ""}: ${typeof defaults} (default) !== ${typeof object} (stored)`)
     if (object !== undefined && typeof object !== "object") {
       return object
     }
