@@ -5,6 +5,7 @@
   "description": "Collection of various adapters for josm.",
   "main": "./app/dist/esm/josmAdapter.mjs",
   "types": "./app/dist/esm/josmAdapter.d.ts",
+  "browser": "./app/dist/esm/josmAdapterBrowserAggregate.mjs",
   "exports": {
     "node": {
       "import": "./app/dist/esm/josmAdapter.mjs",
