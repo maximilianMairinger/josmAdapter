@@ -11,6 +11,9 @@
       "import": "./app/dist/esm/josmAdapter.mjs",
       "require": "./app/dist/cjs/josmAdapter.js"
     },
+    "browser": {
+      "import": "./app/dist/esm/josmAdapterBrowserAggregate.mjs"
+    },
     "default": "./app/dist/esm/josmAdapter.mjs"
   },
   "scripts": {
