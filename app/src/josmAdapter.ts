@@ -25,6 +25,11 @@ export {
   josmScrollReflection
 } from "./domScrollReflection"
 
+export { 
+  domEditAbleReflection,
+  josmEditAbleReflection
+} from "./domEditAbleReflection"
+
 export {
   fsToAdapter,
   josmFsReflection
