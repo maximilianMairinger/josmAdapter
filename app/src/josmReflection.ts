@@ -56,8 +56,8 @@ export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | S
     p.res(pVal = {db, adapter})
     return adapter
   }
-  let r = !reverse ? fullyConnectedJosmAdapter(reflectionAdapter as PrimaryTransmissionAdapter, mkJosmF, true, true)
-  : fullyConnectedJosmAdapter(mkJosmF, reflectionAdapter as SecondaryStoreAdapter, true, true)
+  let r = !reverse ? fullyConnectedJosmAdapter(reflectionAdapter as PrimaryTransmissionAdapter, mkJosmF, true, false)
+  : fullyConnectedJosmAdapter(mkJosmF, reflectionAdapter as SecondaryStoreAdapter, true, false)
 
   return r instanceof Promise ? r.then(() => p) : pVal !== undefined ? pVal : p
 }
