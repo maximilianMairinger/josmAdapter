@@ -17,7 +17,8 @@ export function localStorageToAdapter(id: string) {
     msg,
     send(diff: any) {
       const data = parseDataDiff(msg(), diff)
-      localStorage.setItem(id, stringify(data))
+      // not setting undefined stays consistent. Then null will be read which gets forwarded as undefined above. Note that setting undefined here will result in "undefined" being in localStorage which is invalid JSON and throws on next read.
+      if (data !== undefined) localStorage.setItem(id, stringify(data))
     },
     [isAdapterSym]: true
   } as const
