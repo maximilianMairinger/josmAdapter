@@ -9,6 +9,7 @@ export function localStorageToAdapter(id: string) {
 
   function msg() {
     const storedData = localStorage.getItem(id)
+    if (storedData === "undefined") return undefined
     if (storedData === null) return undefined
     return parse(storedData)
   }
