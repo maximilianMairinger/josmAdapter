@@ -49,8 +49,10 @@ export function josmReflection(reflectionAdapter: PrimaryTransmissionAdapter | S
       adapter.send(storedData)
     }
 
-    if (db[instanceTypeSym] === "Data" && (typeof storedData === "object" && storedData !== null)) throw new Error("Reflection is object be should be primitive based on default.")
-    if (db[instanceTypeSym] === "DataBase" && !(typeof storedData === "object" && storedData !== null)) throw new Error("Reflection is primitive be should be object based on default.")
+    if (storedData !== undefined) {
+      if (db[instanceTypeSym] === "Data" && (typeof storedData === "object" && storedData !== null)) throw new Error("Reflection is object be should be primitive based on default.")
+      if (db[instanceTypeSym] === "DataBase" && !(typeof storedData === "object" && storedData !== null)) throw new Error("Reflection is primitive be should be object based on default.")
+    }
 
 
     p.res(pVal = {db, adapter})
